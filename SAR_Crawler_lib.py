@@ -156,10 +156,20 @@ class SAR_Wiki_Crawler:
             return '\n'.join(l for l in txt.split('\n') if len(l) > 0) # Eliminamos líneas vacías
 
         title = self.title_sum_re.search(text)
-        sumary = self.title_sum_re
         document = {}
         document['url'] = url
-
+        document['title'] = title.group('title')
+        document['summary'] = title.group('summary')
+        document['sections'] = []
+        for i, section in enumerate(self.section_re.finditer(text)):
+            document['sections'].append({}) # abrimos un diccionario para la nueva sección
+            document['sections'][i]['name'] = section.group('name')
+            document['sections'][i]['text'] = clean_text(section.group('text'))
+            document['sections'][i]['subsections'] = []
+            for j, subsection in enumerate(self.subsection_re.finditer(section.group('text'))):
+                document['sections'][i]['subsections'].append({}) # abrimos un diccionario para la nueva subsección
+                document['sections'][i]['subsections'][j]['name'] = subsection.group('name') 
+                document['sections'][i]['subsections'][j]['text'] = clean_text(subsection.group('text'))
 
         # COMPLETAR
 
