@@ -28,7 +28,8 @@ class SAR_Wiki_Crawler:
         # Expresiones regulares útiles para el parseo del documento
         self.title_sum_re = re.compile(r"##(?P<title>.+)##\n(?P<summary>((?!==.+==).+|\n)+)(?P<rest>(.+|\n)*)")
         self.sections_re = re.compile(r"==.+==\n")
-        self.section_re = re.compile(r"==(?P<name>.+)==\n(?P<text>((?!--.+--).+|\n)*)(?P<rest>(.+|\n)*)")
+        #r"==(?P<name>.+)==\n(?P<text>((?!--.+--).+|\n)*)(?P<rest>(.+|\n)*)"
+        self.section_re = re.compile(r"(?P<text>((?!--.+--).+|\n)*)(?P<rest>(.+|\n)*)") #texto es todo lo q haya antes de una subseccion
         self.subsections_re = re.compile(r"--.+--\n")
         self.subsection_re = re.compile(r"--(?P<name>.+)--\n(?P<text>(.+|\n)*)")
 
@@ -161,17 +162,37 @@ class SAR_Wiki_Crawler:
         document['title'] = title.group('title')
         document['summary'] = title.group('summary')
         document['sections'] = []
-        for i, section in enumerate(self.section_re.finditer(text)):
-            document['sections'].append({}) # abrimos un diccionario para la nueva sección
-            document['sections'][i]['name'] = section.group('name')
-            document['sections'][i]['text'] = clean_text(section.group('text'))
-            document['sections'][i]['subsections'] = []
-            for j, subsection in enumerate(self.subsection_re.finditer(section.group('text'))):
-                document['sections'][i]['subsections'].append({}) # abrimos un diccionario para la nueva subsección
-                document['sections'][i]['subsections'][j]['name'] = subsection.group('name') 
-                document['sections'][i]['subsections'][j]['text'] = clean_text(subsection.group('text'))
 
-        # COMPLETAR
+        section = self.sections_re.findall(text) #lista de secciones
+        nsection = []
+        #obtenemos la lista de las secciones limpia y lista para meterlas en el diccionario
+        for s in section:
+            s = s.strip().strip('==')
+            nsection = nsection + [s]
+       
+        secciones = self.sections_re.split(text) #separamos el texto entero por secciones
+        for i, seccion in enumerate(nsection):
+            document['sections'].append({})
+            document['sections'][i]['name'] = seccion
+            aux = self.section_re.search(secciones[i+1]) #en el texto de las secciones solo debe figurar el suyo, sin subsecciones
+            document['sections'][i]['text'] = clean_text(aux.group('text')) 
+            document['sections'][i]['subsections'] = []
+            subsection = self.subsections_re.findall(secciones[i+1]) #le pasamos el texto de la seccion con las subsecciones
+            if len(subsection) > 0: #si no tiene subsecciones una seccion, su len es 0
+                nsubsection = []
+                #hacemos lo mismo que con las secciones, limpiamos los nombres
+                for s in subsection:
+                    s = s.strip().strip('--')
+                    nsubsection = nsubsection + [s]
+                subsecciones = self.subsections_re.split(secciones[i+1])
+                
+                for j, subseccion in enumerate(nsubsection):
+                    document['sections'][i]['subsections'].append({})
+                    document['sections'][i]['subsections'][j]['name'] = subseccion
+                    document['sections'][i]['subsections'][j]['text'] = clean_text(subsecciones[j+1])
+        print(document["sections"][2])
+
+        #VA PERFECTO
 
         return document
 
@@ -256,10 +277,10 @@ class SAR_Wiki_Crawler:
             # de guardado
             total_files = math.ceil(document_limit / batch_size)
 
-        for i in range(max_depth_level):
+        for i in range(1): #TODO cambiar el range
             url = hq.heappop(queue) # Sacamos la primera url de la cola
             visited.add(url) # La añadimos a visitadas
-            content, urls = self.get_wikipedia_entry_content(url) # Obtenemos el texto y las urls q tiene
+            content, urls = self.get_wikipedia_entry_content('https://es.wikipedia.org/wiki/Videojuego') # Obtenemos el texto y las urls q tiene  #(url)
 
             #TODO: url puede q no sea de la wikipedia y lanzará una excepcion, hay q tratarla??
             documents.append(self.parse_wikipedia_textual_content(content, url)) #procesamos el contenido y lo añadimos al buffer
@@ -282,7 +303,7 @@ class SAR_Wiki_Crawler:
         aux = []
         for i in documents:
             aux.append(i)
-            if len(aux == batch_size):
+            if len(aux) == batch_size:
                 self.save_documents(aux, base_filename, files_count, total_files) # Guardamos los documentos
                 files_count += 1
                 aux = []
