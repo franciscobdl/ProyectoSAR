@@ -19,7 +19,7 @@ class SAR_Indexer:
     Se pueden añadir nuevas variables y nuevos metodos
     Los metodos que se añadan se deberan documentar en el codigo y explicar en la memoria
     """
-
+    print("Hello world")
     # lista de campos, el booleano indica si se debe tokenizar el campo
     # NECESARIO PARA LA AMPLIACION MULTIFIELD
     fields = [
