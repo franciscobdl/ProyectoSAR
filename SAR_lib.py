@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 from typing import Optional, List, Union, Dict
 import pickle
+from collections import deque
 
 class SAR_Indexer:
     """
@@ -46,7 +47,7 @@ class SAR_Indexer:
         self.index = {} # hash para el indice invertido de terminos --> clave: termino, valor: posting list
         self.sindex = {} # hash para el indice invertido de stems --> clave: stem, valor: lista con los terminos que tienen ese stem
         self.ptindex = {} # hash para el indice permuterm.
-        self.docs = {} # diccionario de terminos --> clave: entero(docid),  valor: ruta del fichero.
+        self.docs = {} # diccionario de terminos --> clave: entero(docid), valor: ruta del fichero.
         self.weight = {} # hash de terminos para el pesado, ranking de resultados.
         self.articles = {} # hash de articulos --> clave entero (artid), valor: la info necesaria para diferencia los artículos dentro de su fichero
         self.tokenizer = re.compile("\W+") # expresion regular para hacer la tokenizacion
@@ -361,6 +362,74 @@ class SAR_Indexer:
 
         if query is None or len(query) == 0:
             return []
+        
+        #TODO: es posible que metan una palabra que no sale en ningun articulo, en ese caso devolver sustituir esa palabra por una lista vacía
+        #para hacerlo más comodo lo mejor será convertir todas las palabras a posting list con un método to_posting()
+        
+        #tengo q tokenizar la query para saber exactamente lo q pide
+        # cada posting list corresponde al término de la query
+        # al final tendré una única posting list con los resultados de la consulta
+        # si la query tiene más de un término, tengo que hacer la operación entre la posting list resultante y la posting list
+        # el resultado funal estará en la ultima posicion de la lista query
+        operator = ['or', 'and', 'not']
+        
+        query = query.strip()
+        #puedes usar try catch para capturar los errores de usuario que pueden causar excepcion (está mal escrito y dará index out of bounds)
+
+        #recorre la query buscando operadores. Cuando llegue al final, lo q haya no debe de eser un operador y habrá terminado todo
+
+        #tengo que comprobar que no hay 2 palabras seguidas sin operador en medio
+        aux = []
+        for w in query:
+            if w not in operator:
+                aux.append(w)
+                if len(aux) > 1:
+                    print('Error: hay dos palabras seguidas en la query')
+                    return []
+            else: aux = []
+            
+                
+
+        try:
+            for i in range(len(query)):
+                if query[i] == 'or':
+                    if i - 1 == -1:
+                        print('Error: no puede haber un operador al principio de la query')
+                        return []
+                    elif query[i - 1] in operator or query[i + 1] == 'and':
+                        print('Error: no puede haber dos operadores binarios seguidos')
+                        return []
+                    else: query[i + 1] = self.or_posting(self.index[query[i - 1]], self.index[query[i + 1]]) 
+                    #el resultado lo guarda en la posicion mas a la derecha de los elementos implicados
+                
+                if query[i] == 'and':
+                    if i - 1 == -1:
+                        print('Error: no puede haber un operador al principio de la query')
+                        return []
+                    elif query[i - 1] in operator or query[i + 1] == 'or':
+                        print('Error: no puede haber dos operadores binarios seguidos')
+                        return []
+                    elif query[i + 1] == 'not': #and not
+                        query[i + 2] = self.minus_posting(self.index[query[i - 1]], self.index[query[i + 2]])
+                    else: self.and_posting(self.index[query[i - 1]], self.index[query[i + 1]])
+
+                if query[i] == 'not':
+                    if i - 1 >= 0 and query[i - 1] == 'and':
+                        query[i + 1] = self.minus_posting(self.index[query[i - 2]], self.index[query[i + 1]])
+                    else: query[i + 1] = self.not_posting(self.index[query[i + 1]])
+
+            return query[-1]
+            
+        except IndexError:
+            print('Error: la query está mal escrita')
+            return []
+
+
+                
+
+
+                
+        
 
         ########################################
         ## COMPLETAR PARA TODAS LAS VERSIONES ##
@@ -485,6 +554,7 @@ class SAR_Indexer:
         return: posting list con los artid incluidos en p1 y p2
 
         """
+        #como los argumentos son listas, se puede pensar en teoría de conjuntos. AND es la interseccion
         
         pass
         ########################################
@@ -505,7 +575,7 @@ class SAR_Indexer:
         return: posting list con los artid incluidos de p1 o p2
 
         """
-
+        #como los argumentos son listas, se puede pensar en teoría de conjuntos. OR es la union
         pass
         ########################################
         ## COMPLETAR PARA TODAS LAS VERSIONES ##
@@ -525,6 +595,9 @@ class SAR_Indexer:
         return: posting list con los artid incluidos de p1 y no en p2
 
         """
+        #la resta es lo mismo que A AND NOT B
+        p2 = self.not_posting(p2)
+        return self.and_posting(p1, p2)
 
         
         pass
@@ -533,6 +606,19 @@ class SAR_Indexer:
         ########################################################
 
 
+    def not_posting(self, p):
+        """
+        Calcula el NOT de una posting list.
+
+        param:  "p": posting list sobre la que calcular
+
+        return: posting list con los artid no incluidos en p
+
+        """
+        #como los argumentos son listas, se puede pensar en teoría de conjuntos. NOT es el complementario
+
+        articulos = self.articles.keys()
+        return list(set(articulos) - set(p)).sort()
 
 
 
