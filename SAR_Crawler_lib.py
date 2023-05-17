@@ -6,7 +6,7 @@ from typing import Tuple, List, Optional, Dict, Union
 import requests
 import bs4
 import re
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 import json
 import math
 import os
@@ -16,6 +16,8 @@ class SAR_Wiki_Crawler:
     def __init__(self):
         # Expresión regular para detectar si es un enlace de la Wikipedia
         self.wiki_re = re.compile(r"(http(s)?:\/\/(es)\.wikipedia\.org)?\/wiki\/[\w\/_\(\)\%]+")
+        #para completar las urls parciales
+        self.wiki_abs_re = re.compile(r"(es)\.wikipedia\.org")
         # Expresión regular para limpiar anclas de editar
         self.edit_re = re.compile(r"\[(editar)\]")
         # Formato para cada nivel de sección
@@ -86,7 +88,7 @@ class SAR_Wiki_Crawler:
             # Recogemos todos los enlaces del contenido del artículo
             for a in soup.select("div#bodyContent a", href=True):
                 href = a.get("href")
-                if href is not None:
+                if href is not None:                   
                     urls.add(href)
 
             # Contenido del artículo
@@ -156,9 +158,9 @@ class SAR_Wiki_Crawler:
         def clean_text(txt): 
             return '\n'.join(l for l in txt.split('\n') if len(l) > 0) # Eliminamos líneas vacías
 
-        title = self.title_sum_re.search(text)
         document = {}
         document['url'] = url
+        title = self.title_sum_re.search(text)
         document['title'] = title.group('title')
         document['summary'] = title.group('summary')
         document['sections'] = []
@@ -190,7 +192,7 @@ class SAR_Wiki_Crawler:
                     document['sections'][i]['subsections'].append({})
                     document['sections'][i]['subsections'][j]['name'] = subseccion
                     document['sections'][i]['subsections'][j]['text'] = clean_text(subsecciones[j+1])
-        print(document["sections"][2])
+
 
         #VA PERFECTO
 
@@ -253,12 +255,13 @@ class SAR_Wiki_Crawler:
         """
 
         # URLs válidas, ya visitadas (se hayan procesado, o no, correctamente)
+       
         visited = set()
         # URLs en cola
         to_process = set(initial_urls)
         # Direcciones a visitar
-        queue = [(0, "", url) for url in to_process]
-        hq.heapify(queue) # Ordenamos la cola por profundidad
+        queue = [(0, "", url) for url in to_process] #creo q se pone numerito para q se ordene por profundidad
+        hq.heapify(queue) # Ordenamos la cola por prioridad
         # Buffer de documentos capturados
         documents: List[dict] = [] #aqui se guardan los documentos q han sido procesados
 
@@ -266,7 +269,7 @@ class SAR_Wiki_Crawler:
         # Contador del número de documentos capturados
         total_documents_captured = 0
         # Contador del número de ficheros escritos
-        files_count = 0
+        files_count = 1
 
         # En caso de que no utilicemos bach_size, asignamos None a total_files
         # así el guardado no modificará el nombre del fichero base
@@ -277,23 +280,59 @@ class SAR_Wiki_Crawler:
             # de guardado
             total_files = math.ceil(document_limit / batch_size)
 
-        for i in range(1): #TODO cambiar el range
-            url = hq.heappop(queue) # Sacamos la primera url de la cola
+            #MIO
+        
+        depths = {} #diccionario que guarda las urls de cada profundidad
+        while len(queue) > 0:
+            
+
+            depth, parent, url = hq.heappop(queue) # Sacamos la primera url de la cola, pero como devuelve una tupla, nos quedamos con la url q está en la pos 2
+
+            if depth not in depths: #si mi profundidad no está en el diccionario, la añado y creo una lista para sus urls
+                depths[depth] = [] #crea lista para las urls de mi profundidad
+                depths[depth].append(url) #añade la url a la lista de urls de mi profundidad
+            else:
+                depths[depth].append(url) #si ya existe la profundidad, añado la url a la lista de urls de esa profundidad
+            next_depth = depth + 1 #calcula cual sería la profundidad del hijo
+
+            #convierte todas las urls relativas en absolutas
+            url_parsed = urlparse(url)
+            if not url_parsed.scheme:
+                url = urljoin(parent, url)
+                print("Url: ", url)
+
+
+            print('obteniendo contenido de: ', url)
+            content, urls = self.get_wikipedia_entry_content(url) # Obtenemos el texto y las urls q tiene. 
             visited.add(url) # La añadimos a visitadas
-            content, urls = self.get_wikipedia_entry_content('https://es.wikipedia.org/wiki/Videojuego') # Obtenemos el texto y las urls q tiene  #(url)
 
-            #TODO: url puede q no sea de la wikipedia y lanzará una excepcion, hay q tratarla??
-            documents.append(self.parse_wikipedia_textual_content(content, url)) #procesamos el contenido y lo añadimos al buffer
-            total_documents_captured += 1 # Aumentamos el contador de documentos capturados
+            print("tamaño urls: ", len(urls))
+                
+            for u in urls:
+                if self.is_valid_url(u) and u not in visited and next_depth <= max_depth_level: 
+                    # Si la url es válida, no se ha visitado ya y no se ha alcanzado la profundidad maxima, la añadimos a la cola
+                    if (next_depth) not in depths: #si tengo un hijo y su profundidad no existe, la uso 
+                        u = (next_depth, url, u) 
+                    else:
+                        u = (depth, url, u)
+                    # print(u)
 
-            
-            for u in urls: # Añadimos las urls obtenidas q no han sido visitadas a la cola 
-                if u not in visited:
-                    hq.heappush(queue, u)
-
-            if total_documents_captured >= document_limit: # Si hemos alcanzado el límite de documentos capturados, deja de hacer nada
+                    hq.heappush(queue, u) #añadimos a la cola
+            print(total_documents_captured)
+            if total_documents_captured >= document_limit:
                 break
+        
+            documents.append(self.parse_wikipedia_textual_content(content, url)) #procesamos el contenido y lo añadimos al buffer
+            print('procesado')
+            total_documents_captured += 1
+        print('documentos capturados: ', total_documents_captured)   
+        print('lista profundidades: ', depths)
+        # print('tamaño profundidad 1: ', len(depths[1]))
+        print('profundidad: ', depth)
             
+        
+        print("urls visitadas: ", len(visited))
+        
 
         #guarda en un fichero el documento de una url
         #crea una lista aux para ir metiendo batch_size documentos. Cuando se llegue a ese tamaño,
