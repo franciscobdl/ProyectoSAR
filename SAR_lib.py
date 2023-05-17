@@ -374,7 +374,7 @@ class SAR_Indexer:
         operator = ['or', 'and', 'not']
         
         query = query.strip()
-        #puedes usar try catch para capturar los errores de usuario que pueden causar excepcion (está mal escrito y dará index out of bounds)
+        #puedes usar try catch para capturar los errores de usuario que pueden causar excepcion (cuando está mal escrito y dará index out of bounds)
 
         #recorre la query buscando operadores. Cuando llegue al final, lo q haya no debe de eser un operador y habrá terminado todo
 
@@ -399,7 +399,7 @@ class SAR_Indexer:
                     elif query[i - 1] in operator or query[i + 1] == 'and':
                         print('Error: no puede haber dos operadores binarios seguidos')
                         return []
-                    else: query[i + 1] = self.or_posting(self.index[query[i - 1]], self.index[query[i + 1]]) 
+                    else: query[i + 1] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1])) 
                     #el resultado lo guarda en la posicion mas a la derecha de los elementos implicados
                 
                 if query[i] == 'and':
@@ -410,15 +410,18 @@ class SAR_Indexer:
                         print('Error: no puede haber dos operadores binarios seguidos')
                         return []
                     elif query[i + 1] == 'not': #and not
-                        query[i + 2] = self.minus_posting(self.index[query[i - 1]], self.index[query[i + 2]])
-                    else: self.and_posting(self.index[query[i - 1]], self.index[query[i + 1]])
+                        query[i + 2] = self.minus_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 2]))
+                    else: self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
 
                 if query[i] == 'not':
-                    if i - 1 >= 0 and query[i - 1] == 'and':
-                        query[i + 1] = self.minus_posting(self.index[query[i - 2]], self.index[query[i + 1]])
-                    else: query[i + 1] = self.not_posting(self.index[query[i + 1]])
+                    if query[i + 1] in operator:
+                        print('Error: no puede haber un operador despues de not')
+                        return []
+                    elif i - 2 >= 0 and query[i - 1] == 'and':
+                        query[i + 1] = self.minus_posting(self.get_posting(query[i - 2]), self.get_posting(query[i + 1]))
+                    else: query[i + 1] = self.not_posting(self.get_posting(query[i + 1]))
 
-            return query[-1]
+            return query[-1] #el resultado se queda en la ultima posicion de la lista
             
         except IndexError:
             print('Error: la query está mal escrita')
