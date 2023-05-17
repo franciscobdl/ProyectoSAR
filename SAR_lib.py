@@ -20,7 +20,6 @@ class SAR_Indexer:
     Se pueden añadir nuevas variables y nuevos metodos
     Los metodos que se añadan se deberan documentar en el codigo y explicar en la memoria
     """
-    print("Hello world")
     # lista de campos, el booleano indica si se debe tokenizar el campo
     # NECESARIO PARA LA AMPLIACION MULTIFIELD
     fields = [
@@ -636,10 +635,37 @@ class SAR_Indexer:
 
         """
 
-        pass
-        ########################################
-        ## COMPLETAR PARA TODAS LAS VERSIONES ##
-        ########################################
+        #Inicialización de variables
+        respuesta = []
+        puntero1 = 0
+        puntero2 = 0
+        
+        #Bucle principal para recorrer las dos listas
+        while(puntero1 != p1.length-1 and puntero2 != p2.length-1):
+            #Si los ID de los Documentos son iguales, se añade el documento una sola vez a la respuesta y se avanzan los punteros
+            if p1[puntero1] == p2[puntero2]:
+                respuesta.append(p1[puntero1])
+                puntero1 = puntero1 + 1
+                puntero2 = puntero2 + 1
+            else:
+                #Se añaden los 2 documentos a la lista
+                respuesta.append(p1[puntero1], p2[puntero2])
+                #Si el ID del Documento de p1 es menor, se avanza el puntero de p1
+                if p1[puntero1] < p2 [puntero2]:
+                    puntero1 = puntero1 + 1
+                #Sino, se avanza el de p2
+                else:
+                    puntero2 = puntero2 + 1
+        
+        #Se añade la lista cuyo puntero no había llegado al final
+        if(puntero1 != p1.length-1):
+            respuesta.append(p1[puntero1:p1.length-1])
+        else:
+            respuesta.append(p2[puntero2:p2.length-1])
+        
+        #Se devuelve el resultado ordenado
+        respuesta.sort()
+        return respuesta
 
 
     def minus_posting(self, p1, p2):
