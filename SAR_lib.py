@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 from typing import Optional, List, Union, Dict
 import pickle
+from collections import deque
 
 class SAR_Indexer:
     """
@@ -19,7 +20,6 @@ class SAR_Indexer:
     Se pueden añadir nuevas variables y nuevos metodos
     Los metodos que se añadan se deberan documentar en el codigo y explicar en la memoria
     """
-
     # lista de campos, el booleano indica si se debe tokenizar el campo
     # NECESARIO PARA LA AMPLIACION MULTIFIELD
     fields = [
@@ -46,7 +46,7 @@ class SAR_Indexer:
         self.index = {} # hash para el indice invertido de terminos --> clave: termino, valor: posting list
         self.sindex = {} # hash para el indice invertido de stems --> clave: stem, valor: lista con los terminos que tienen ese stem
         self.ptindex = {} # hash para el indice permuterm.
-        self.docs = {} # diccionario de terminos --> clave: entero(docid),  valor: ruta del fichero.
+        self.docs = {} # diccionario de terminos --> clave: entero(docid), valor: ruta del fichero.
         self.weight = {} # hash de terminos para el pesado, ranking de resultados.
         self.articles = {} # hash de articulos --> clave entero (artid), valor: la info necesaria para diferencia los artículos dentro de su fichero
         self.tokenizer = re.compile("\W+") # expresion regular para hacer la tokenizacion
@@ -232,8 +232,43 @@ class SAR_Indexer:
 
 
         """
-        for i, line in enumerate(open(filename)):
-            j = self.parse_article(line)
+        for i, line in enumerate(open(filename)): #cada linea es un articulo
+            j = self.parse_article(line) 
+            if self.already_in_index(j):
+                continue
+            
+            doc_id = len(self.docs) + 1
+            self.docs[doc_id] = filename #da el docid
+
+            # Indexar los campos
+            for field, tokenize_field in self.fields:
+                if field not in j:
+                    continue
+
+                content = j[field]
+                tokens = self.tokenize(content) if tokenize_field else [content]
+
+                for token in tokens:
+                    term = token.lower()
+
+                    if self.use_stemming:
+                        term = self.stemmer.stem(term)
+
+                    if term not in self.index:
+                        self.index[term] = {}
+
+                    if doc_id not in self.index[term]:
+                        self.index[term][doc_id] = []
+
+                    self.index[term][doc_id].append(field)
+
+            self.urls.add(j['url'])
+
+        if self.use_stemming:
+            self.make_stemming()
+
+        if self.permuterm:
+            self.make_permuterm()
 
 
         #
@@ -321,7 +356,12 @@ class SAR_Indexer:
         Muestra estadisticas de los indices
         
         """
-        pass
+        print(f"Numero de documentos indexados: {len(self.docs)}")
+        print(f"Numero de URLs unicas: {len(self.urls)}")
+        print(f"Tamaño del indice: {sys.getsizeof(self.index)} bytes")
+        print(f"Tamaño del indice con stemming: {sys.getsizeof(self.sindex)} bytes")
+        print(f"Tamaño del indice permuterm: {sys.getsizeof(self.ptindex)} bytes")
+
         ########################################
         ## COMPLETAR PARA TODAS LAS VERSIONES ##
         ########################################
@@ -361,6 +401,77 @@ class SAR_Indexer:
 
         if query is None or len(query) == 0:
             return []
+        
+        #TODO: es posible que metan una palabra que no sale en ningun articulo, en ese caso devolver sustituir esa palabra por una lista vacía
+        #para hacerlo más comodo lo mejor será convertir todas las palabras a posting list con un método to_posting()
+        
+        #tengo q tokenizar la query para saber exactamente lo q pide
+        # cada posting list corresponde al término de la query
+        # al final tendré una única posting list con los resultados de la consulta
+        # si la query tiene más de un término, tengo que hacer la operación entre la posting list resultante y la posting list
+        # el resultado funal estará en la ultima posicion de la lista query
+        operator = ['or', 'and', 'not']
+        
+        query = query.strip()
+        #puedes usar try catch para capturar los errores de usuario que pueden causar excepcion (cuando está mal escrito y dará index out of bounds)
+
+        #recorre la query buscando operadores. Cuando llegue al final, lo q haya no debe de eser un operador y habrá terminado todo
+
+        #tengo que comprobar que no hay 2 palabras seguidas sin operador en medio
+        aux = []
+        for w in query:
+            if w not in operator:
+                aux.append(w)
+                if len(aux) > 1:
+                    print('Error: hay dos palabras seguidas en la query')
+                    return []
+            else: aux = []
+            
+                
+
+        try:
+            for i in range(len(query)):
+                if query[i] == 'or':
+                    if i - 1 == -1:
+                        print('Error: no puede haber un operador al principio de la query')
+                        return []
+                    elif query[i - 1] in operator or query[i + 1] == 'and':
+                        print('Error: no puede haber dos operadores binarios seguidos')
+                        return []
+                    else: query[i + 1] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1])) 
+                    #el resultado lo guarda en la posicion mas a la derecha de los elementos implicados
+                
+                if query[i] == 'and':
+                    if i - 1 == -1:
+                        print('Error: no puede haber un operador al principio de la query')
+                        return []
+                    elif query[i - 1] in operator or query[i + 1] == 'or':
+                        print('Error: no puede haber dos operadores binarios seguidos')
+                        return []
+                    elif query[i + 1] == 'not': #and not
+                        query[i + 2] = self.minus_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 2]))
+                    else: self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
+
+                if query[i] == 'not':
+                    if query[i + 1] in operator:
+                        print('Error: no puede haber un operador despues de not')
+                        return []
+                    elif i - 2 >= 0 and query[i - 1] == 'and':
+                        query[i + 1] = self.minus_posting(self.get_posting(query[i - 2]), self.get_posting(query[i + 1]))
+                    else: query[i + 1] = self.not_posting(self.get_posting(query[i + 1]))
+
+            return query[-1] #el resultado se queda en la ultima posicion de la lista
+            
+        except IndexError:
+            print('Error: la query está mal escrita')
+            return []
+
+
+                
+
+
+                
+        
 
         ########################################
         ## COMPLETAR PARA TODAS LAS VERSIONES ##
@@ -485,12 +596,30 @@ class SAR_Indexer:
         return: posting list con los artid incluidos en p1 y p2
 
         """
+                
+        #Inicialización de variables
+        respuesta = []
+        puntero1 = 0
+        puntero2 = 0
         
-        pass
-        ########################################
-        ## COMPLETAR PARA TODAS LAS VERSIONES ##
-        ########################################
-
+        #Bucle principal para recorrer las dos listas
+        while(puntero1 != p1.length-1 and puntero2 != p2.length-1):
+            #Si los ID de los Documentos son iguales, se añade el documento a la respuesta y se avanzan los punteros
+            if p1[puntero1] == p2[puntero2]:
+                respuesta.append(p1[puntero1])
+                puntero1 = puntero1 + 1
+                puntero2 = puntero2 + 1
+            else:
+                #Si el ID del Documento de p1 es menor, se avanza el puntero de p1
+                if p1[puntero1] < p2 [puntero2]:
+                    puntero1 = puntero1 + 1
+                #Sino, se avanza el de p2
+                else:
+                    puntero2 = puntero2 + 1
+        #Se devuelve el resultado cuando cualquier puntero llega al final de la lista
+        return respuesta
+                
+        
 
 
     def or_posting(self, p1:list, p2:list):
@@ -506,10 +635,37 @@ class SAR_Indexer:
 
         """
 
-        pass
-        ########################################
-        ## COMPLETAR PARA TODAS LAS VERSIONES ##
-        ########################################
+        #Inicialización de variables
+        respuesta = []
+        puntero1 = 0
+        puntero2 = 0
+        
+        #Bucle principal para recorrer las dos listas
+        while(puntero1 != p1.length-1 and puntero2 != p2.length-1):
+            #Si los ID de los Documentos son iguales, se añade el documento una sola vez a la respuesta y se avanzan los punteros
+            if p1[puntero1] == p2[puntero2]:
+                respuesta.append(p1[puntero1])
+                puntero1 = puntero1 + 1
+                puntero2 = puntero2 + 1
+            else:
+                #Se añaden los 2 documentos a la lista
+                respuesta.append(p1[puntero1], p2[puntero2])
+                #Si el ID del Documento de p1 es menor, se avanza el puntero de p1
+                if p1[puntero1] < p2 [puntero2]:
+                    puntero1 = puntero1 + 1
+                #Sino, se avanza el de p2
+                else:
+                    puntero2 = puntero2 + 1
+        
+        #Se añade la lista cuyo puntero no había llegado al final
+        if(puntero1 != p1.length-1):
+            respuesta.append(p1[puntero1:p1.length-1])
+        else:
+            respuesta.append(p2[puntero2:p2.length-1])
+        
+        #Se devuelve el resultado ordenado
+        respuesta.sort()
+        return respuesta
 
 
     def minus_posting(self, p1, p2):
@@ -525,6 +681,9 @@ class SAR_Indexer:
         return: posting list con los artid incluidos de p1 y no en p2
 
         """
+        #la resta es lo mismo que A AND NOT B
+        p2 = self.not_posting(p2)
+        return self.and_posting(p1, p2)
 
         
         pass
@@ -533,6 +692,19 @@ class SAR_Indexer:
         ########################################################
 
 
+    def not_posting(self, p):
+        """
+        Calcula el NOT de una posting list.
+
+        param:  "p": posting list sobre la que calcular
+
+        return: posting list con los artid no incluidos en p
+
+        """
+        #como los argumentos son listas, se puede pensar en teoría de conjuntos. NOT es el complementario
+
+        articulos = self.articles.keys()
+        return list(set(articulos) - set(p)).sort()
 
 
 
@@ -585,7 +757,10 @@ class SAR_Indexer:
         return: el numero de artículo recuperadas, para la opcion -T
 
         """
-        pass
+        n = len(self.solve_query(query))
+        print(f'Resultados para la consulta{query}: {n}')
+        return len(n)
+        
         ################
         ## COMPLETAR  ##
         ################
