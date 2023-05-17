@@ -233,8 +233,43 @@ class SAR_Indexer:
 
 
         """
-        for i, line in enumerate(open(filename)):
-            j = self.parse_article(line)
+        for i, line in enumerate(open(filename)): #cada linea es un articulo
+            j = self.parse_article(line) 
+            if self.already_in_index(j):
+                continue
+            
+            doc_id = len(self.docs) + 1
+            self.docs[doc_id] = filename #da el docid
+
+            # Indexar los campos
+            for field, tokenize_field in self.fields:
+                if field not in j:
+                    continue
+
+                content = j[field]
+                tokens = self.tokenize(content) if tokenize_field else [content]
+
+                for token in tokens:
+                    term = token.lower()
+
+                    if self.use_stemming:
+                        term = self.stemmer.stem(term)
+
+                    if term not in self.index:
+                        self.index[term] = {}
+
+                    if doc_id not in self.index[term]:
+                        self.index[term][doc_id] = []
+
+                    self.index[term][doc_id].append(field)
+
+            self.urls.add(j['url'])
+
+        if self.use_stemming:
+            self.make_stemming()
+
+        if self.permuterm:
+            self.make_permuterm()
 
 
         #
@@ -322,7 +357,12 @@ class SAR_Indexer:
         Muestra estadisticas de los indices
         
         """
-        pass
+        print(f"Numero de documentos indexados: {len(self.docs)}")
+        print(f"Numero de URLs unicas: {len(self.urls)}")
+        print(f"Tamaño del indice: {sys.getsizeof(self.index)} bytes")
+        print(f"Tamaño del indice con stemming: {sys.getsizeof(self.sindex)} bytes")
+        print(f"Tamaño del indice permuterm: {sys.getsizeof(self.ptindex)} bytes")
+
         ########################################
         ## COMPLETAR PARA TODAS LAS VERSIONES ##
         ########################################
@@ -674,7 +714,10 @@ class SAR_Indexer:
         return: el numero de artículo recuperadas, para la opcion -T
 
         """
-        pass
+        n = len(self.solve_query(query))
+        print(f'Resultados para la consulta{query}: {n}')
+        return len(n)
+        
         ################
         ## COMPLETAR  ##
         ################
