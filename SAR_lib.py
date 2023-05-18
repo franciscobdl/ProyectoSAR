@@ -232,13 +232,16 @@ class SAR_Indexer:
 
 
         """
+        doc_id = len(self.docs) + 1
+        self.docs[doc_id] = filename #da el docid
+        
         for i, line in enumerate(open(filename)): #cada linea es un articulo
             j = self.parse_article(line) 
             if self.already_in_index(j):
                 continue
             
-            doc_id = len(self.docs) + 1
-            self.docs[doc_id] = filename #da el docid
+            art_id = len(self.articles) + 1
+            self.articles[art_id] = j['url'] #asigna el art_id
 
             # Indexar los campos
             for field, tokenize_field in self.fields:
@@ -260,16 +263,19 @@ class SAR_Indexer:
                     if doc_id not in self.index[term]:
                         self.index[term][doc_id] = []
 
-                    self.index[term][doc_id].append(field)
+                    self.index[term][doc_id].append(art_id) #el doc_id está puesto para q sepas de que archivo sale el resultado pero no se como de necesario es
+                    #TODO: asegúrate de que los art_id no estén repetidos (spoiler: hay repetidos)
 
             self.urls.add(j['url'])
 
+        
         if self.use_stemming:
             self.make_stemming()
 
         if self.permuterm:
             self.make_permuterm()
-
+            
+        print(self.index)
 
         #
         # 
@@ -356,16 +362,37 @@ class SAR_Indexer:
         Muestra estadisticas de los indices
         
         """
-        print(f"Numero de documentos indexados: {len(self.docs)}")
-        print(f"Numero de URLs unicas: {len(self.urls)}")
-        print(f"Tamaño del indice: {sys.getsizeof(self.index)} bytes")
-        print(f"Tamaño del indice con stemming: {sys.getsizeof(self.sindex)} bytes")
-        print(f"Tamaño del indice permuterm: {sys.getsizeof(self.ptindex)} bytes")
+        print("=" * 30)
+        print("Number of indexed files:", len(self.docs))
+        print("-" * 30)
+        print("Number of indexed articles:", len(self.articles))
+        print("-" * 30)
+        print('TOKENS:')
+        for field, tok in self.fields:
+            if (self.multifield or field == "article"):
+                print("\t# of tokens in '{}': {}".format(field, len(self.index[field])))
+        if (self.permuterm):
+            print("-" * 30)
+            print('PERMUTERMS:')
+            for field, tok in self.fields:
+                if (self.multifield or field == "article"):
+                    print("\t# of tokens in '{}': {}".format(field, len(self.ptindex[field])))
+        if (self.stemming):
+            print("-" * 30)
+            print('STEMS:')
+            for field, tok in self.fields:
+                if (self.multifield or field == "article"):
+                    print("\t# of tokens in '{}': {}".format(field, len(self.sindex[field])))
+        print("-" * 30)
+        if (self.positional):
+            print('Positional queries are allowed.')
+        else:    
+            print('Positional queries are NOT allowed.')
+        print("=" * 30)
 
         ########################################
         ## COMPLETAR PARA TODAS LAS VERSIONES ##
         ########################################
-
         
 
 
