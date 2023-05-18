@@ -458,7 +458,7 @@ class SAR_Indexer:
                         return []
                     elif i - 2 >= 0 and query[i - 1] == 'and':
                         query[i + 1] = self.minus_posting(self.get_posting(query[i - 2]), self.get_posting(query[i + 1]))
-                    else: query[i + 1] = self.not_posting(self.get_posting(query[i + 1]))
+                    else: query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
 
             return query[-1] #el resultado se queda en la ultima posicion de la lista
             
