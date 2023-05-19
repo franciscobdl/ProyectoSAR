@@ -625,11 +625,17 @@ class SAR_Indexer:
         
         #Si la lista es vacía, devuelve el conjunto entero
         if(len(p) == 0): return articulos
+        
+        #AUX para testing
+        aux = []
+        for i in range(len(articulos)):
+            aux.append(i)
+        aux.sort()
                
         for i in range(len(p)):
-            articulos.remove([p[i]])
+            aux.remove([p[i]])
             
-        return articulos
+        return aux
 
 
     def and_posting(self, p1:list, p2:list):
