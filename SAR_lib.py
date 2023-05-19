@@ -702,7 +702,8 @@ class SAR_Indexer:
                 puntero2 = puntero2 + 1
             else:
                 #Se añaden los 2 documentos a la lista
-                respuesta.append(p1[puntero1], p2[puntero2])
+                respuesta.append(p1[puntero1])
+                respuesta.append(p2[puntero2])
                 #Si el ID del Documento de p1 es menor, se avanza el puntero de p1
                 if p1[puntero1] < p2 [puntero2]:
                     puntero1 = puntero1 + 1
