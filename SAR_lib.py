@@ -613,11 +613,21 @@ class SAR_Indexer:
 
         """
         
-        #Como los argumentos son listas, se puede pensar en teoría de conjuntos. NOT es el complementario
-
+        #Conjunto de todos los Doc_IDs
         articulos = self.articles.keys()
-        return list(set(articulos) - set(p)).sort()
-
+        #Por si acaso, se ordena
+        articulos.sort()
+        respuesta = []
+        
+        #Si la lista p contiene todos los Doc_IDs se devuelve una lista vacía
+        #En principio, ninguna lista será mayor que la lista articulos
+        if(p == articulos): return []
+        
+        #Si la lista es vacía, devuelve el conjunto entero
+        if(len(p) == 0): return articulos
+               
+        for i in range(len(p)):
+            articulos.remove([p[i]])
 
 
     def and_posting(self, p1:list, p2:list):
@@ -638,8 +648,11 @@ class SAR_Indexer:
         puntero1 = 0
         puntero2 = 0
         
+        #Si alguna lista es vacía, devuelve una lista vacía
+        if(len(p1) == 0 or len(p2) == 0): return respuesta
+        
         #Bucle principal para recorrer las dos listas
-        while(puntero1 != p1.length-1 and puntero2 != p2.length-1):
+        while(puntero1 < len(p1)-1 and puntero2 < len(p2)-1):
             #Si los ID de los Documentos son iguales, se añade el documento a la respuesta y se avanzan los punteros
             if p1[puntero1] == p2[puntero2]:
                 respuesta.append(p1[puntero1])
@@ -676,8 +689,12 @@ class SAR_Indexer:
         puntero1 = 0
         puntero2 = 0
         
+        #Si alguna de las listas es vacía, devuelve la lista no vacía
+        if(len(p1) == 0): return p2
+        if(len(p2) == 0): return p1
+        
         #Bucle principal para recorrer las dos listas
-        while(puntero1 != p1.length-1 and puntero2 != p2.length-1):
+        while(puntero1 < len(p1)-1 and puntero2 < len(p2)-1):
             #Si los ID de los Documentos son iguales, se añade el documento una sola vez a la respuesta y se avanzan los punteros
             if p1[puntero1] == p2[puntero2]:
                 respuesta.append(p1[puntero1])
@@ -694,7 +711,7 @@ class SAR_Indexer:
                     puntero2 = puntero2 + 1
         
         #Se añade la lista cuyo puntero no había llegado al final
-        if(puntero1 != p1.length-1):
+        if(puntero1 < len(p1)-1):
             respuesta.append(p1[puntero1:p1.length-1])
         else:
             respuesta.append(p2[puntero2:p2.length-1])
