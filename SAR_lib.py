@@ -627,10 +627,12 @@ class SAR_Indexer:
         
         #Si la lista es vacía, devuelve el conjunto entero
         if(len(p) == 0): return articulos
-               
+
         for x in p:
             print(x)
             articulos.remove(x)
+            
+        return articulos
 
 
     def and_posting(self, p1:list, p2:list):
