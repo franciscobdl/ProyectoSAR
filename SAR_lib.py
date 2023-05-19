@@ -699,7 +699,8 @@ class SAR_Indexer:
         while(puntero1 < len(p1) and puntero2 < len(p2)):
             #Si los ID de los Documentos son iguales, se añade el documento una sola vez a la respuesta y se avanzan los punteros
             if p1[puntero1] == p2[puntero2]:
-                respuesta.append(p1[puntero1])
+                if p1[puntero1] not in respuesta:
+                    respuesta.append(p1[puntero1])
                 puntero1 = puntero1 + 1
                 puntero2 = puntero2 + 1
             else:
