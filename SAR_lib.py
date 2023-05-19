@@ -242,7 +242,7 @@ class SAR_Indexer:
                 continue
             
             art_id = len(self.articles) + 1
-            self.articles[art_id] = j['url'] #asigna el art_id
+            self.articles[art_id] = j['url'] #asigna el art_id TODO: usa el valor de art_id para meter toda la info que necesites en forma de tupla
 
             # Indexar los campos
             for field, tokenize_field in self.fields:
@@ -461,6 +461,7 @@ class SAR_Indexer:
 
         try:
             for i in range(len(query)):
+                print('query actual: ', query)
                 if query[i] not in operator and len(query) == 1:
                     query[i] = self.get_posting(query[i]) #si la query solo es una palabra, devuelve la posting list de esa palabra
                     
@@ -483,9 +484,13 @@ class SAR_Indexer:
                         return []
                     elif query[i + 1] == 'not': #and not
                         query[i + 2] = self.minus_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 2]))
+                        query[i]=('') #elimino el termino de la query para que no se vuelva a usar
+                        query[i - 1]=('') #elimino el termino de la query para que no se vuelva a usar
+                        query[i + 1]=('') #elimino el termino de la query para que no se vuelva a usar
                     else: 
-                        print(query[i - 1], query[i + 1])
                         query[i + 1] = self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
+                        query[i]=('') #elimino el termino de la query para que no se vuelva a usar
+                        query[i - 1]=('') #elimino el termino de la query para que no se vuelva a usar
 
                 elif query[i] == 'not':
                     if query[i + 1] in operator:
@@ -535,8 +540,7 @@ class SAR_Indexer:
         NECESARIO PARA TODAS LAS VERSIONES
 
         """
-        print('getposting: ', term)
-        print(type((term)))
+        
         if isinstance(term, List): return term
         if term in self.index: return self.index[term]
         else: return []
@@ -619,8 +623,8 @@ class SAR_Indexer:
         #Conjunto de todos los Doc_IDs
         articulos = list(self.articles.keys())
         respuesta = []
-        print(articulos)
         print(p)
+        print(articulos)
         #Si la lista p contiene todos los Doc_IDs se devuelve una lista vacía
         #En principio, ninguna lista será mayor que la lista articulos
         if(p == articulos): return []
@@ -629,7 +633,6 @@ class SAR_Indexer:
         if(len(p) == 0): return articulos
 
         for x in p:
-            print(x)
             articulos.remove(x)
             
         return articulos
@@ -647,7 +650,6 @@ class SAR_Indexer:
         return: posting list con los artid incluidos en p1 y p2
 
         """
-        print(p1, p2)
         #Inicialización de variables
         respuesta = []
         puntero1 = 0
@@ -803,7 +805,7 @@ class SAR_Indexer:
 
         """
         n = len(self.solve_query(query))
-        print(f'Resultados para la consulta {query}: {n}')
+        print(f'Resultados para la consulta "{query}": {n}')
         return n
         
         ################
