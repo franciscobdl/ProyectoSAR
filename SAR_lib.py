@@ -446,18 +446,9 @@ class SAR_Indexer:
         if query is None or len(query) == 0:
             return []
                 
-        #tengo q tokenizar la query para saber exactamente lo q pide
-        # cada posting list corresponde al término de la query
-        # al final tendré una única posting list con los resultados de la consulta
-        # si la query tiene más de un término, tengo que hacer la operación entre la posting list resultante y la posting list
-        # el resultado funal estará en la ultima posicion de la lista query
+
         operator = ['or', 'and', 'not']
         
-        #puedes usar try catch para capturar los errores de usuario que pueden causar excepcion (cuando está mal escrito y dará index out of bounds)
-
-        #recorre la query buscando operadores. Cuando llegue al final, lo q haya no debe de eser un operador y habrá terminado todo
-
-        #tengo que comprobar que no hay 2 palabras seguidas sin operador en medio
         aux = []
         for w in query:
             if w not in operator:
@@ -471,7 +462,7 @@ class SAR_Indexer:
 
         try:
             for i in range(len(query)):
-                print('query actual: ', query)
+                # print('query actual: ', query)
                 if query[i] not in operator and len(query) == 1:
                     query[i] = self.get_posting(query[i]) #si la query solo es una palabra, devuelve la posting list de esa palabra
                     
@@ -482,7 +473,16 @@ class SAR_Indexer:
                     elif query[i - 1] in operator or query[i + 1] == 'and':
                         print('Error: no puede haber dos operadores binarios seguidos')
                         return []
-                    else: query[i + 1] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1])) 
+                    elif query[i + 1] == 'not': #or not
+                        query[i + 1] = self.reverse_posting(self.get_posting(query[i + 2]))
+                        query[i + 2] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
+                        query[i - 1] = ''
+                        query[i] = ''
+                        query[i + 1] = ''
+                    else: 
+                        query[i + 1] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1])) 
+                        query[i - 1] = ''
+                        query[i] = ''
                     #el resultado lo guarda en la posicion mas a la derecha de los elementos implicados
                 
                 elif query[i] == 'and':
@@ -494,42 +494,30 @@ class SAR_Indexer:
                         return []
                     elif query[i + 1] == 'not': #and not
                         query[i + 2] = self.minus_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 2]))
-                        query[i]=('') #elimino el termino de la query para que no se vuelva a usar
-                        query[i - 1]=('') #elimino el termino de la query para que no se vuelva a usar
-                        query[i + 1]=('') #elimino el termino de la query para que no se vuelva a usar
+                        query[i]= '' #elimino el termino de la query para que no se vuelva a usar
+                        query[i - 1]= '' #elimino el termino de la query para que no se vuelva a usar
+                        query[i + 1]= '' #elimino el termino de la query para que no se vuelva a usar
                     else: 
                         query[i + 1] = self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
-                        query[i]=('') #elimino el termino de la query para que no se vuelva a usar
-                        query[i - 1]=('') #elimino el termino de la query para que no se vuelva a usar
+                        query[i]= '' #elimino el termino de la query para que no se vuelva a usar
+                        query[i - 1]= '' #elimino el termino de la query para que no se vuelva a usar
 
                 elif query[i] == 'not':
                     if query[i + 1] in operator:
                         print('Error: no puede haber un operador despues de not')
-                        return []
-                    elif i - 2 >= 0 and query[i - 1] == 'and':
-                        
-                        query[i + 1] = self.minus_posting(self.get_posting(query[i - 2]), self.get_posting(query[i + 1]))
-                    else: query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
+                        return []            
+                    else: 
+                        query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
+                        query[i]= '' #elimino el termino de la query para que no se vuelva a usar
+                        self.clean_solve(query)
+        #TODO: si hay un not después de un or igual se jode
 
-            print(query[-1])
+            print('resultado: ', query[-1])
             return query[-1] #el resultado se queda en la ultima posicion de la lista
             
         except IndexError:
             print('Error: la query está mal escrita')
             return []
-
-
-                
-
-
-                
-        
-
-        ########################################
-        ## COMPLETAR PARA TODAS LAS VERSIONES ##
-        ########################################
-
-
 
 
     def get_posting(self, term:str, field:Optional[str]=None):
@@ -633,8 +621,6 @@ class SAR_Indexer:
         #Conjunto de todos los Doc_IDs
         articulos = list(self.articles.keys())
         respuesta = []
-        print(p)
-        print(articulos)
         #Si la lista p contiene todos los Doc_IDs se devuelve una lista vacía
         #En principio, ninguna lista será mayor que la lista articulos
         if(p == articulos): return []
@@ -816,8 +802,9 @@ class SAR_Indexer:
         """
         pl = self.solve_query(query)
         n = len(pl)
-        print(f'Resultados para la consulta "{query}": {n}')
-
+        # print(f'Resultados para la consulta "{query}": {n}')
+        # query = 
+        # for doc_id in pl:
             
         
         
