@@ -618,8 +618,6 @@ class SAR_Indexer:
         
         #Conjunto de todos los Doc_IDs
         articulos = self.articles.keys()
-        #Por si acaso, se ordena
-        articulos.sort()
         respuesta = []
         
         #Si la lista p contiene todos los Doc_IDs se devuelve una lista vacía
