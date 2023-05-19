@@ -654,7 +654,7 @@ class SAR_Indexer:
         if(len(p1) == 0 or len(p2) == 0): return respuesta
         
         #Bucle principal para recorrer las dos listas
-        while(puntero1 < len(p1)-1 and puntero2 < len(p2)-1):
+        while(puntero1 < len(p1) and puntero2 < len(p2)):
             #Si los ID de los Documentos son iguales, se añade el documento a la respuesta y se avanzan los punteros
             if p1[puntero1] == p2[puntero2]:
                 respuesta.append(p1[puntero1])
@@ -696,7 +696,7 @@ class SAR_Indexer:
         if(len(p2) == 0): return p1
         
         #Bucle principal para recorrer las dos listas
-        while(puntero1 < len(p1)-1 and puntero2 < len(p2)-1):
+        while(puntero1 < len(p1) and puntero2 < len(p2)):
             #Si los ID de los Documentos son iguales, se añade el documento una sola vez a la respuesta y se avanzan los punteros
             if p1[puntero1] == p2[puntero2]:
                 respuesta.append(p1[puntero1])
@@ -713,10 +713,10 @@ class SAR_Indexer:
                     puntero2 = puntero2 + 1
         
         #Se añade la lista cuyo puntero no había llegado al final
-        if(puntero1 < len(p1)-1):
-            respuesta.append(p1[puntero1:p1.length-1])
+        if(puntero1 < len(p1)):
+            respuesta.append(p1[puntero1:-1])
         else:
-            respuesta.append(p2[puntero2:p2.length-1])
+            respuesta.append(p2[puntero2:-1])
         
         #Se devuelve el resultado ordenado
         respuesta.sort()
