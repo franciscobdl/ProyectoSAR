@@ -235,7 +235,7 @@ class SAR_Indexer:
         doc_id = len(self.docs) + 1
         self.docs[doc_id] = filename #da el docid
         
-        for i, line in enumerate(open(filename)): #cada linea es un articulo
+        for i, line in enumerate(open(filename)): #cada linea es un articulo. la i indica la pos del articulo en el archivo
             j = self.parse_article(line) 
             if self.already_in_index(j):
                 continue
@@ -258,12 +258,11 @@ class SAR_Indexer:
                         term = self.stemmer.stem(term)
 
                     if term not in self.index:
-                        self.index[term] = {}
+                        self.index[term] = []
 
-                    if doc_id not in self.index[term]:
-                        self.index[term][doc_id] = []
+                    if art_id not in self.index[term]:
+                        self.index[term].append(art_id)
 
-                    self.index[term][doc_id].append(art_id) #el doc_id está puesto para q sepas de que archivo sale el resultado pero no se como de necesario es
                     #TODO: asegúrate de que los art_id no estén repetidos (spoiler: hay repetidos)
 
             self.urls.add(j['url'])
@@ -275,6 +274,12 @@ class SAR_Indexer:
         if self.permuterm:
             self.make_permuterm()
             
+        terminos = sorted(self.index.keys())
+        inverted_index = {}
+        for termino in terminos:
+            inverted_index[termino] = self.index[termino]
+            
+        self.index = inverted_index
         print(self.index)
 
         #
@@ -425,13 +430,12 @@ class SAR_Indexer:
         return: posting list con el resultado de la query
 
         """
-
+        query = self.tokenize(query)
+        print(query)
+       
         if query is None or len(query) == 0:
             return []
-        
-        #TODO: es posible que metan una palabra que no sale en ningun articulo, en ese caso devolver sustituir esa palabra por una lista vacía
-        #para hacerlo más comodo lo mejor será convertir todas las palabras a posting list con un método to_posting()
-        
+                
         #tengo q tokenizar la query para saber exactamente lo q pide
         # cada posting list corresponde al término de la query
         # al final tendré una única posting list con los resultados de la consulta
@@ -439,7 +443,6 @@ class SAR_Indexer:
         # el resultado funal estará en la ultima posicion de la lista query
         operator = ['or', 'and', 'not']
         
-        query = query.strip()
         #puedes usar try catch para capturar los errores de usuario que pueden causar excepcion (cuando está mal escrito y dará index out of bounds)
 
         #recorre la query buscando operadores. Cuando llegue al final, lo q haya no debe de eser un operador y habrá terminado todo
@@ -458,7 +461,10 @@ class SAR_Indexer:
 
         try:
             for i in range(len(query)):
-                if query[i] == 'or':
+                if query[i] not in operator and len == 1:
+                    query[i] = self.get_posting(query[i]) #si la query solo es una palabra, devuelve la posting list de esa palabra
+                    
+                elif query[i] == 'or':
                     if i - 1 == -1:
                         print('Error: no puede haber un operador al principio de la query')
                         return []
@@ -468,7 +474,7 @@ class SAR_Indexer:
                     else: query[i + 1] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1])) 
                     #el resultado lo guarda en la posicion mas a la derecha de los elementos implicados
                 
-                if query[i] == 'and':
+                elif query[i] == 'and':
                     if i - 1 == -1:
                         print('Error: no puede haber un operador al principio de la query')
                         return []
@@ -477,9 +483,11 @@ class SAR_Indexer:
                         return []
                     elif query[i + 1] == 'not': #and not
                         query[i + 2] = self.minus_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 2]))
-                    else: self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
+                    else: 
+                        print(query[i - 1], query[i + 1])
+                        self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
 
-                if query[i] == 'not':
+                elif query[i] == 'not':
                     if query[i + 1] in operator:
                         print('Error: no puede haber un operador despues de not')
                         return []
@@ -487,6 +495,7 @@ class SAR_Indexer:
                         query[i + 1] = self.minus_posting(self.get_posting(query[i - 2]), self.get_posting(query[i + 1]))
                     else: query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
 
+            print(query[-1])
             return query[-1] #el resultado se queda en la ultima posicion de la lista
             
         except IndexError:
@@ -526,7 +535,7 @@ class SAR_Indexer:
 
         """
         
-        if self.index(str) != None: return self.index(str) 
+        if term in self.index: return self.index[term]
         else: return []
         
 
@@ -769,8 +778,8 @@ class SAR_Indexer:
 
         """
         n = len(self.solve_query(query))
-        print(f'Resultados para la consulta{query}: {n}')
-        return len(n)
+        print(f'Resultados para la consulta {query}: {n}')
+        return n
         
         ################
         ## COMPLETAR  ##
