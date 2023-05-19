@@ -48,7 +48,7 @@ class SAR_Indexer:
         self.ptindex = {} # hash para el indice permuterm.
         self.docs = {} # diccionario de terminos --> clave: entero(docid), valor: ruta del fichero.
         self.weight = {} # hash de terminos para el pesado, ranking de resultados.
-        self.articles = {} # hash de articulos --> clave entero (artid), valor: la info necesaria para diferencia los artículos dentro de su fichero
+        self.articles = {} # hash de articulos --> clave entero (artid), valor: la info necesaria para diferencia los artículos dentro de su fichero (url, title, all)
         self.tokenizer = re.compile("\W+") # expresion regular para hacer la tokenizacion
         self.stemmer = SnowballStemmer('spanish') # stemmer en castellano
         self.show_all = False # valor por defecto, se cambia con self.set_showall()
@@ -510,7 +510,6 @@ class SAR_Indexer:
                         query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
                         query[i]= '' #elimino el termino de la query para que no se vuelva a usar
                         self.clean_solve(query)
-        #TODO: si hay un not después de un or igual se jode
 
             print('resultado: ', query[-1])
             return query[-1] #el resultado se queda en la ultima posicion de la lista
@@ -804,7 +803,9 @@ class SAR_Indexer:
         n = len(pl)
         # print(f'Resultados para la consulta "{query}": {n}')
         # query = 
-        # for doc_id in pl:
+        for ord, doc_id in enumerate(pl):
+            print(f"Resultado {ord+1}\t({doc_id})\tURL :{self. articles[doc_id][0]}")
+            print(f"\t{self.articles[doc_id][1]}\n")
             
         
         
