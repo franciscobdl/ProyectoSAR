@@ -617,9 +617,10 @@ class SAR_Indexer:
         """
         
         #Conjunto de todos los Doc_IDs
-        articulos = self.articles.keys()
+        articulos = list(self.articles.keys())
         respuesta = []
-        
+        print(articulos)
+        print(p)
         #Si la lista p contiene todos los Doc_IDs se devuelve una lista vacía
         #En principio, ninguna lista será mayor que la lista articulos
         if(p == articulos): return []
@@ -627,8 +628,9 @@ class SAR_Indexer:
         #Si la lista es vacía, devuelve el conjunto entero
         if(len(p) == 0): return articulos
                
-        for i in range(len(p)):
-            articulos.remove([p[i]])
+        for x in p:
+            print(x)
+            articulos.remove(x)
 
 
     def and_posting(self, p1:list, p2:list):
