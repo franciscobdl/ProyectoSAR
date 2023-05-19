@@ -431,7 +431,6 @@ class SAR_Indexer:
 
         """
         query = self.tokenize(query)
-        print(query)
        
         if query is None or len(query) == 0:
             return []
@@ -461,7 +460,7 @@ class SAR_Indexer:
 
         try:
             for i in range(len(query)):
-                if query[i] not in operator and len == 1:
+                if query[i] not in operator and len(query) == 1:
                     query[i] = self.get_posting(query[i]) #si la query solo es una palabra, devuelve la posting list de esa palabra
                     
                 elif query[i] == 'or':
@@ -485,13 +484,14 @@ class SAR_Indexer:
                         query[i + 2] = self.minus_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 2]))
                     else: 
                         print(query[i - 1], query[i + 1])
-                        self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
+                        query[i + 1] = self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
 
                 elif query[i] == 'not':
                     if query[i + 1] in operator:
                         print('Error: no puede haber un operador despues de not')
                         return []
                     elif i - 2 >= 0 and query[i - 1] == 'and':
+                        
                         query[i + 1] = self.minus_posting(self.get_posting(query[i - 2]), self.get_posting(query[i + 1]))
                     else: query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
 
@@ -534,7 +534,9 @@ class SAR_Indexer:
         NECESARIO PARA TODAS LAS VERSIONES
 
         """
-        
+        print('getposting: ', term)
+        print(type((term)))
+        if isinstance(term, List): return term
         if term in self.index: return self.index[term]
         else: return []
         
@@ -642,7 +644,7 @@ class SAR_Indexer:
         return: posting list con los artid incluidos en p1 y p2
 
         """
-                
+        print(p1, p2)
         #Inicialización de variables
         respuesta = []
         puntero1 = 0
