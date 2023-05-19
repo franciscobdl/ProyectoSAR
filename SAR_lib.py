@@ -44,6 +44,7 @@ class SAR_Indexer:
         """
         self.urls = set() # hash para las urls procesadas,
         self.index = {} # hash para el indice invertido de terminos --> clave: termino, valor: posting list
+        self.numindex = {} # hash para el indice invertido de terminos pero con sus posiciones en los documentos
         self.sindex = {} # hash para el indice invertido de stems --> clave: stem, valor: lista con los terminos que tienen ese stem
         self.ptindex = {} # hash para el indice permuterm.
         self.docs = {} # diccionario de terminos --> clave: entero(docid), valor: ruta del fichero.
@@ -715,9 +716,11 @@ class SAR_Indexer:
         
         #Se añade la lista cuyo puntero no había llegado al final
         if(puntero1 < len(p1)):
-            respuesta.append(p1[puntero1:-1])
+            for docid in p1[puntero1:-1]:
+                respuesta.append(docid)
         else:
-            respuesta.append(p2[puntero2:-1])
+            for docid in p2[puntero2:-1]:
+                respuesta.append(docid)
         
         #Se devuelve el resultado ordenado
         respuesta.sort()
