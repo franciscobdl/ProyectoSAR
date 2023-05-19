@@ -7,7 +7,6 @@ import math
 from pathlib import Path
 from typing import Optional, List, Union, Dict
 import pickle
-from collections import deque
 
 class SAR_Indexer:
     """
@@ -44,7 +43,7 @@ class SAR_Indexer:
         """
         self.urls = set() # hash para las urls procesadas,
         self.index = {} # hash para el indice invertido de terminos --> clave: termino, valor: posting list
-        self.numindex = {} # hash para el indice invertido de terminos pero con sus posiciones en los documentos
+        self.numindex = {} # hash para el indice invertido de terminos pero con sus posiciones en los articulos --> clave: termino, valor: posting list (art_id, pos)
         self.sindex = {} # hash para el indice invertido de stems --> clave: stem, valor: lista con los terminos que tienen ese stem
         self.ptindex = {} # hash para el indice permuterm.
         self.docs = {} # diccionario de terminos --> clave: entero(docid), valor: ruta del fichero.
@@ -237,34 +236,35 @@ class SAR_Indexer:
         self.docs[doc_id] = filename #da el docid
         
         for i, line in enumerate(open(filename)): #cada linea es un articulo. la i indica la pos del articulo en el archivo
-            j = self.parse_article(line) 
+            j = self.parse_article(line) #j = diccionario con la info del articulo
             if self.already_in_index(j):
                 continue
-            
+            # print(j['all'])
             art_id = len(self.articles) + 1
-            self.articles[art_id] = j['url'] #asigna el art_id TODO: usa el valor de art_id para meter toda la info que necesites en forma de tupla
+            self.articles[art_id] = (j['url'], j['title'], j['all']) #asigna el art_id TODO: usa el valor de art_id para meter toda la info que necesites en forma de tupla
 
             # Indexar los campos
-            for field, tokenize_field in self.fields:
-                if field not in j:
-                    continue
+            # for field, tokenize_field in self.fields:
+            #     if field not in j:
+            #         continue
+                
+            content = j['all']
+            tokens = enumerate(self.tokenize(content))
+            # if tokenize_field else [content]
+            
+            for pos, token in tokens:
+                term = token.lower() #pasa a minusculas
 
-                content = j[field]
-                tokens = self.tokenize(content) if tokenize_field else [content]
+                if self.use_stemming:
+                    term = self.stemmer.stem(term)
 
-                for token in tokens:
-                    term = token.lower()
+                if term not in self.index:
+                    self.index[term] = [] #crea la entrada en el indice
+                    self.numindex[term] = [] #crea la entrada en el index de posicion de terminos
 
-                    if self.use_stemming:
-                        term = self.stemmer.stem(term)
-
-                    if term not in self.index:
-                        self.index[term] = []
-
-                    if art_id not in self.index[term]:
-                        self.index[term].append(art_id)
-
-                    #TODO: asegúrate de que los art_id no estén repetidos (spoiler: hay repetidos)
+                if art_id not in self.index[term]:
+                    self.index[term].append(art_id)
+                    self.numindex[term].append((art_id, pos)) #añade el art_id a la lista de art_id del termino con la posición en la que está
 
             self.urls.add(j['url'])
 
@@ -281,7 +281,7 @@ class SAR_Indexer:
             inverted_index[termino] = self.index[termino]
             
         self.index = inverted_index
-        print(self.index)
+        print(self.tokenize(self.articles[99][2])[1172])
 
         #
         # 
@@ -292,6 +292,16 @@ class SAR_Indexer:
         #################
         ### COMPLETAR ###
         #################
+        
+        def get_token_pos(self, pos, art_id):
+            """
+            Obtiene el token dada una posición y un id de documento.
+           
+            input: "pos" es un entero que indica la posición del token en el documento "art_id"
+            
+            return: el token de la posición "pos" del documento "art_id"
+            """
+            return self.tokenize(self.articles[doc_id][2])[pos]
 
 
 
@@ -804,8 +814,13 @@ class SAR_Indexer:
         return: el numero de artículo recuperadas, para la opcion -T
 
         """
-        n = len(self.solve_query(query))
+        pl = self.solve_query(query)
+        n = len(pl)
         print(f'Resultados para la consulta "{query}": {n}')
+
+            
+        
+        
         return n
         
         ################
