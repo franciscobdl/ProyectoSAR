@@ -7,7 +7,6 @@ import math
 from pathlib import Path
 from typing import Optional, List, Union, Dict
 import pickle
-from collections import deque
 
 class SAR_Indexer:
     """
@@ -44,12 +43,12 @@ class SAR_Indexer:
         """
         self.urls = set() # hash para las urls procesadas,
         self.index = {} # hash para el indice invertido de terminos --> clave: termino, valor: posting list
-        self.numindex = {} # hash para el indice invertido de terminos pero con sus posiciones en los documentos
+        self.numindex = {} # hash para el indice invertido de terminos pero con sus posiciones en los articulos --> clave: termino, valor: posting list (art_id, pos)
         self.sindex = {} # hash para el indice invertido de stems --> clave: stem, valor: lista con los terminos que tienen ese stem
         self.ptindex = {} # hash para el indice permuterm.
         self.docs = {} # diccionario de terminos --> clave: entero(docid), valor: ruta del fichero.
         self.weight = {} # hash de terminos para el pesado, ranking de resultados.
-        self.articles = {} # hash de articulos --> clave entero (artid), valor: la info necesaria para diferencia los artículos dentro de su fichero
+        self.articles = {} # hash de articulos --> clave entero (artid), valor: la info necesaria para diferencia los artículos dentro de su fichero (url, title, all)
         self.tokenizer = re.compile("\W+") # expresion regular para hacer la tokenizacion
         self.stemmer = SnowballStemmer('spanish') # stemmer en castellano
         self.show_all = False # valor por defecto, se cambia con self.set_showall()
@@ -237,34 +236,35 @@ class SAR_Indexer:
         self.docs[doc_id] = filename #da el docid
         
         for i, line in enumerate(open(filename)): #cada linea es un articulo. la i indica la pos del articulo en el archivo
-            j = self.parse_article(line) 
+            j = self.parse_article(line) #j = diccionario con la info del articulo
             if self.already_in_index(j):
                 continue
-            
+            # print(j['all'])
             art_id = len(self.articles) + 1
-            self.articles[art_id] = j['url'] #asigna el art_id
+            self.articles[art_id] = (j['url'], j['title'], j['all']) #asigna el art_id TODO: usa el valor de art_id para meter toda la info que necesites en forma de tupla
 
             # Indexar los campos
-            for field, tokenize_field in self.fields:
-                if field not in j:
-                    continue
+            # for field, tokenize_field in self.fields:
+            #     if field not in j:
+            #         continue
+                
+            content = j['all']
+            tokens = enumerate(self.tokenize(content))
+            # if tokenize_field else [content]
+            
+            for pos, token in tokens:
+                term = token.lower() #pasa a minusculas
 
-                content = j[field]
-                tokens = self.tokenize(content) if tokenize_field else [content]
+                if self.use_stemming:
+                    term = self.stemmer.stem(term)
 
-                for token in tokens:
-                    term = token.lower()
+                if term not in self.index:
+                    self.index[term] = [] #crea la entrada en el indice
+                    self.numindex[term] = [] #crea la entrada en el index de posicion de terminos
 
-                    if self.use_stemming:
-                        term = self.stemmer.stem(term)
-
-                    if term not in self.index:
-                        self.index[term] = []
-
-                    if art_id not in self.index[term]:
-                        self.index[term].append(art_id)
-
-                    #TODO: asegúrate de que los art_id no estén repetidos (spoiler: hay repetidos)
+                if art_id not in self.index[term]:
+                    self.index[term].append(art_id)
+                    self.numindex[term].append((art_id, pos)) #añade el art_id a la lista de art_id del termino con la posición en la que está
 
             self.urls.add(j['url'])
 
@@ -281,7 +281,7 @@ class SAR_Indexer:
             inverted_index[termino] = self.index[termino]
             
         self.index = inverted_index
-        print(self.index)
+        print(self.tokenize(self.articles[99][2])[1172])
 
         #
         # 
@@ -292,6 +292,16 @@ class SAR_Indexer:
         #################
         ### COMPLETAR ###
         #################
+        
+        def get_token_pos(self, pos, art_id):
+            """
+            Obtiene el token dada una posición y un id de documento.
+           
+            input: "pos" es un entero que indica la posición del token en el documento "art_id"
+            
+            return: el token de la posición "pos" del documento "art_id"
+            """
+            return self.tokenize(self.articles[doc_id][2])[pos]
 
 
 
@@ -436,18 +446,9 @@ class SAR_Indexer:
         if query is None or len(query) == 0:
             return []
                 
-        #tengo q tokenizar la query para saber exactamente lo q pide
-        # cada posting list corresponde al término de la query
-        # al final tendré una única posting list con los resultados de la consulta
-        # si la query tiene más de un término, tengo que hacer la operación entre la posting list resultante y la posting list
-        # el resultado funal estará en la ultima posicion de la lista query
+
         operator = ['or', 'and', 'not']
         
-        #puedes usar try catch para capturar los errores de usuario que pueden causar excepcion (cuando está mal escrito y dará index out of bounds)
-
-        #recorre la query buscando operadores. Cuando llegue al final, lo q haya no debe de eser un operador y habrá terminado todo
-
-        #tengo que comprobar que no hay 2 palabras seguidas sin operador en medio
         aux = []
         for w in query:
             if w not in operator:
@@ -461,6 +462,7 @@ class SAR_Indexer:
 
         try:
             for i in range(len(query)):
+                # print('query actual: ', query)
                 if query[i] not in operator and len(query) == 1:
                     query[i] = self.get_posting(query[i]) #si la query solo es una palabra, devuelve la posting list de esa palabra
                     
@@ -471,7 +473,16 @@ class SAR_Indexer:
                     elif query[i - 1] in operator or query[i + 1] == 'and':
                         print('Error: no puede haber dos operadores binarios seguidos')
                         return []
-                    else: query[i + 1] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1])) 
+                    elif query[i + 1] == 'not': #or not
+                        query[i + 1] = self.reverse_posting(self.get_posting(query[i + 2]))
+                        query[i + 2] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
+                        query[i - 1] = ''
+                        query[i] = ''
+                        query[i + 1] = ''
+                    else: 
+                        query[i + 1] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1])) 
+                        query[i - 1] = ''
+                        query[i] = ''
                     #el resultado lo guarda en la posicion mas a la derecha de los elementos implicados
                 
                 elif query[i] == 'and':
@@ -483,38 +494,29 @@ class SAR_Indexer:
                         return []
                     elif query[i + 1] == 'not': #and not
                         query[i + 2] = self.minus_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 2]))
+                        query[i]= '' #elimino el termino de la query para que no se vuelva a usar
+                        query[i - 1]= '' #elimino el termino de la query para que no se vuelva a usar
+                        query[i + 1]= '' #elimino el termino de la query para que no se vuelva a usar
                     else: 
-                        print(query[i - 1], query[i + 1])
                         query[i + 1] = self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
+                        query[i]= '' #elimino el termino de la query para que no se vuelva a usar
+                        query[i - 1]= '' #elimino el termino de la query para que no se vuelva a usar
 
                 elif query[i] == 'not':
                     if query[i + 1] in operator:
                         print('Error: no puede haber un operador despues de not')
-                        return []
-                    elif i - 2 >= 0 and query[i - 1] == 'and':
-                        
-                        query[i + 1] = self.minus_posting(self.get_posting(query[i - 2]), self.get_posting(query[i + 1]))
-                    else: query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
+                        return []            
+                    else: 
+                        query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
+                        query[i]= '' #elimino el termino de la query para que no se vuelva a usar
+                        self.clean_solve(query)
 
-            print(query[-1])
+            print('resultado: ', query[-1])
             return query[-1] #el resultado se queda en la ultima posicion de la lista
             
         except IndexError:
             print('Error: la query está mal escrita')
             return []
-
-
-                
-
-
-                
-        
-
-        ########################################
-        ## COMPLETAR PARA TODAS LAS VERSIONES ##
-        ########################################
-
-
 
 
     def get_posting(self, term:str, field:Optional[str]=None):
@@ -535,8 +537,7 @@ class SAR_Indexer:
         NECESARIO PARA TODAS LAS VERSIONES
 
         """
-        print('getposting: ', term)
-        print(type((term)))
+        
         if isinstance(term, List): return term
         if term in self.index: return self.index[term]
         else: return []
@@ -618,7 +619,7 @@ class SAR_Indexer:
         
         #Conjunto de todos los Doc_IDs
         articulos = list(self.articles.keys())
-        
+        respuesta = []
         #Si la lista p contiene todos los Doc_IDs se devuelve una lista vacía
         #En principio, ninguna lista será mayor que la lista articulos
         if(p == articulos): return []
@@ -626,8 +627,8 @@ class SAR_Indexer:
         #Si la lista es vacía, devuelve el conjunto entero
         if(len(p) == 0): return articulos
 
-        for i in range(len(p)):
-            articulos.remove([p[i]])
+        for x in p:
+            articulos.remove(x)
             
         return articulos
 
@@ -644,7 +645,6 @@ class SAR_Indexer:
         return: posting list con los artid incluidos en p1 y p2
 
         """
-        print(p1, p2)
         #Inicialización de variables
         respuesta = []
         puntero1 = 0
@@ -800,8 +800,16 @@ class SAR_Indexer:
         return: el numero de artículo recuperadas, para la opcion -T
 
         """
-        n = len(self.solve_query(query))
-        print(f'Resultados para la consulta {query}: {n}')
+        pl = self.solve_query(query)
+        n = len(pl)
+        # print(f'Resultados para la consulta "{query}": {n}')
+        # query = 
+        for ord, doc_id in enumerate(pl):
+            print(f"Resultado {ord+1}\t({doc_id})\tURL :{self. articles[doc_id][0]}")
+            print(f"\t{self.articles[doc_id][1]}\n")
+            
+        
+        
         return n
         
         ################
