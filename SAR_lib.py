@@ -575,9 +575,16 @@ class SAR_Indexer:
         
         for term in terms:
             postinglist = self.numindex[term]
-            for i in range(len(postinglist)):
-                docid, positions = postinglist[i]
-                if 
+            if len(postinglist) != 0 : 
+                docid, pos = postinglist[0]
+                positions = [pos]
+                for i in range(len(postinglist)-1):
+                    docidaux, positionsaux = postinglist[i+1]
+                    if docidaux == docid:
+                        positions.append(positionsaux)
+                
+                    
+                   
                 
                 
                 
@@ -723,12 +730,12 @@ class SAR_Indexer:
         while(puntero1 < len(p1) and puntero2 < len(p2)):
             #Si los ID de los Documentos son iguales, se añade el documento una sola vez a la respuesta y se avanzan los punteros
             if p1[puntero1] == p2[puntero2]:
-                respuesta.append(p1)
+                respuesta.append(p1[puntero1])
                 puntero1 = puntero1 + 1
                 puntero2 = puntero2 + 1
             else:
                 if p1[puntero1] < p2[puntero2]:
-                    respuesta.append(p1)
+                    respuesta.append(p1[puntero1])
                     puntero1 = puntero1 + 1
                     while(puntero1 < len(p1) and puntero2 < len(p2) and p1[puntero1] < p2[puntero2]):
                         respuesta.append(p1[puntero1])
@@ -745,7 +752,7 @@ class SAR_Indexer:
         if(puntero1 < len(p1)):
             for docid in p1[puntero1:-1]:
                 respuesta.append(docid)
-        else:
+        if(puntero2 < len(p2)):
             for docid in p2[puntero2:-1]:
                 respuesta.append(docid)
                 
