@@ -351,8 +351,14 @@ class SAR_Indexer:
 
 
         """
-        
-        pass
+        terminos = list(self.index.keys())
+        for termino in terminos:
+            if self.stemmer.stem(termino) not in self.sindex: #si el stem no está en el indice de stemming
+                self.sindex[self.stemmer.stem(termino)] = [] #crea la entrada en el indice de stemming
+            else:
+                self.sindex[self.stemmer.stem(termino)].append(termino)
+
+        print(self.sindex)
         ####################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
         ####################################################
@@ -862,9 +868,8 @@ class SAR_Indexer:
         tokens = self.tokenize(self.articles[art_id][2])[posi-10:posi+10]
         for t in tokens:
             s1 += t + ' '
-        # print('SNIPPET: ', res)
         s2 = '' 
-        if posiciones[-1] != posi:
+        if len(posiciones) > 1:
             posf = posiciones[-1]
             tokens = self.tokenize(self.articles[art_id][2])[posf-10:posf+10]
             for t in tokens:
