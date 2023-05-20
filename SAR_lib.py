@@ -30,7 +30,7 @@ class SAR_Indexer:
     SHOW_MAX = 10
 
     all_atribs = ['urls', 'index', 'sindex', 'ptindex', 'docs', 'weight', 'articles',
-                  'tokenizer', 'stemmer', 'show_all', 'use_stemming']
+                  'tokenizer', 'stemmer', 'show_all', 'use_stemming', 'numindex']
 
     def __init__(self):
         """
@@ -260,11 +260,14 @@ class SAR_Indexer:
 
                 if term not in self.index:
                     self.index[term] = [] #crea la entrada en el indice
+
+                if term not in self.numindex:
                     self.numindex[term] = [] #crea la entrada en el index de posicion de terminos
 
                 if art_id not in self.index[term]:
                     self.index[term].append(art_id)
-                    self.numindex[term].append((art_id, pos)) #añade el art_id a la lista de art_id del termino con la posición en la que está
+                    
+                self.numindex[term].append((art_id, pos)) #añade el art_id a la lista de art_id del termino con la posición en la que está
 
             self.urls.add(j['url'])
 
@@ -292,16 +295,18 @@ class SAR_Indexer:
         #################
         ### COMPLETAR ###
         #################
+        print(self.numindex)
         
-        def get_token_pos(self, pos, art_id):
-            """
-            Obtiene el token dada una posición y un id de documento.
-           
-            input: "pos" es un entero que indica la posición del token en el documento "art_id"
-            
-            return: el token de la posición "pos" del documento "art_id"
-            """
-            return self.tokenize(self.articles[doc_id][2])[pos]
+    def get_token_pos(self, art_id, pos):
+        #NUEVO
+        """
+        Obtiene el token dada una posición y un id de documento.
+        
+        input: "pos" es un entero que indica la posición del token en el documento "art_id"
+        
+        return: el token de la posición "pos" del documento "art_id"
+        """
+        return self.tokenize(self.articles[art_id][2])[pos]
 
 
 
@@ -509,9 +514,7 @@ class SAR_Indexer:
                     else: 
                         query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
                         query[i]= '' #elimino el termino de la query para que no se vuelva a usar
-                        self.clean_solve(query)
 
-            print('resultado: ', query[-1])
             return query[-1] #el resultado se queda en la ultima posicion de la lista
             
         except IndexError:
@@ -785,7 +788,7 @@ class SAR_Indexer:
                     print(f'>>>>{query}\t{reference} != {result}<<<<')
                     errors = True                    
             else:
-                print(query)
+                print(line)
         return not errors
 
 
@@ -800,21 +803,63 @@ class SAR_Indexer:
         return: el numero de artículo recuperadas, para la opcion -T
 
         """
+        operator = ['or', 'and', 'not']
         pl = self.solve_query(query)
         n = len(pl)
-        # print(f'Resultados para la consulta "{query}": {n}')
-        # query = 
-        for ord, doc_id in enumerate(pl):
-            print(f"Resultado {ord+1}\t({doc_id})\tURL :{self. articles[doc_id][0]}")
-            print(f"\t{self.articles[doc_id][1]}\n")
+        query = query.lower().split()
+        count = 0
+        for ord, art_id in enumerate(pl):
+            print(f"Resultado {ord+1}\t({art_id})\tURL :{self. articles[art_id][0]}")
+            print(f"\t{self.articles[art_id][1]}\n")
+            if self.show_snippet:
+                for q in query:
+                    if q not in operator: #para cada palabra de la consulta que no sea un operador
+                        (s1, s2) = self.get_snippet(art_id, q)
+                        print(f"Snippet 1: ...{s1}...\n")
+                        if s2 != '':
+                            print(f"Snippet 2: ...{s2}...\n")
+            count += 1
+            if not self.show_all and count == self.SHOW_MAX: break #si no se quiere mostrar todos los resultados, se muestra hasta el maximo
             
-        
-        
         return n
         
         ################
         ## COMPLETAR  ##
         ################
+
+    def get_snippet(self, art_id, term):
+        #NUEVO
+        """
+        obtiene el snippet de un termino en un articulo 
+
+        param:  art_id: id del articulo
+                term: termino a buscar
+
+        return: tupla con la primera y ultima aparicion del termino
+        """
+        posiciones = []
+        articulos = self.numindex[term] #lista de tuplas (art_id, posiciones)
+        for a in articulos:
+            if a[0] == art_id:
+                posiciones.append(a[1]) #si el articulo q busco coincide con el que estoy mirando, añado sus posiciones a la lista
+        posi = posiciones[0]
+
+        s1 = ''
+        tokens = self.tokenize(self.articles[art_id][2])[posi-10:posi+10]
+        for t in tokens:
+            s1 += t + ' '
+        # print('SNIPPET: ', res)
+        s2 = '' 
+        if posiciones[-1] != posi:
+            posf = posiciones[-1]
+            tokens = self.tokenize(self.articles[art_id][2])[posf-10:posf+10]
+            for t in tokens:
+                s2 += t + ' '
+        res = (s1, s2) #(snippet inicial,snippet final)
+        
+
+        return res
+
 
 
 
