@@ -741,7 +741,7 @@ class SAR_Indexer:
                         respuesta.append(p1[puntero1])
                         puntero1 = puntero1 + 1
                 else:
-                    respuesta.append(p2)
+                    respuesta.append(p2[puntero2])
                     puntero2 = puntero2 + 1
                     while(puntero1 < len(p1) and puntero2 < len(p2) and p2[puntero2] < p1[puntero1]):
                         respuesta.append(p2[puntero2])
