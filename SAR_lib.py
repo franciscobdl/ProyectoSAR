@@ -750,10 +750,10 @@ class SAR_Indexer:
         
         #Se añade la lista cuyo puntero no había llegado al final
         if(puntero1 < len(p1)):
-            for docid in p1[puntero1:-1]:
+            for docid in p1[puntero1:]:
                 respuesta.append(docid)
         if(puntero2 < len(p2)):
-            for docid in p2[puntero2:-1]:
+            for docid in p2[puntero2:]:
                 respuesta.append(docid)
                 
         return respuesta
