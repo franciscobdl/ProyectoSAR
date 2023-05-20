@@ -685,7 +685,6 @@ class SAR_Indexer:
         return: posting list con los artid incluidos de p1 o p2
 
         """
-
         #Inicialización de variables
         respuesta = []
         puntero1 = 0
@@ -699,20 +698,26 @@ class SAR_Indexer:
         while(puntero1 < len(p1) and puntero2 < len(p2)):
             #Si los ID de los Documentos son iguales, se añade el documento una sola vez a la respuesta y se avanzan los punteros
             if p1[puntero1] == p2[puntero2]:
-                if p1[puntero1] not in respuesta:
-                    respuesta.append(p1[puntero1])
+                respuesta.append(p1)
                 puntero1 = puntero1 + 1
                 puntero2 = puntero2 + 1
-            else:
-                #Se añaden los 2 documentos a la lista
-                respuesta.append(p1[puntero1])
-                respuesta.append(p2[puntero2])
-                #Si el ID del Documento de p1 es menor, se avanza el puntero de p1
-                if p1[puntero1] < p2 [puntero2]:
+            if p1[puntero1] < p2[puntero2]:
+                respuesta.append(p1)
+                puntero1 = puntero1 + 1
+                while(p1[puntero1] < p2[puntero2]):
+                    respuesta.append(p1[puntero1])
                     puntero1 = puntero1 + 1
-                #Sino, se avanza el de p2
-                else:
+                puntero1 = puntero1 + 1
+                puntero2 = puntero2 + 1
+            if p2[puntero2] < p1[puntero1]:
+                respuesta.append(p2)
+                puntero2 = puntero2 + 1
+                while(p2[puntero2] < p1[puntero1]):
+                    respuesta.append(p2[puntero2])
                     puntero2 = puntero2 + 1
+                puntero1 = puntero1 + 1
+                puntero2 = puntero2 + 1
+
         
         #Se añade la lista cuyo puntero no había llegado al final
         if(puntero1 < len(p1)):
@@ -721,9 +726,7 @@ class SAR_Indexer:
         else:
             for docid in p2[puntero2:-1]:
                 respuesta.append(docid)
-        
-        #Se devuelve el resultado ordenado
-        respuesta.sort()
+                
         return respuesta
 
 
