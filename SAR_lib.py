@@ -568,6 +568,16 @@ class SAR_Indexer:
         ########################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE POSICIONALES ##
         ########################################################
+        
+        terminos = []
+        #Consigo las posting lists con las posiciones de todos los términos
+        for term in terms:
+            terminos.append(self.numindex[terms])
+        
+        for i in range(len(terminos)):
+            
+        
+        
 
 
     def get_stemming(self, term:str, field: Optional[str]=None):
@@ -708,22 +718,23 @@ class SAR_Indexer:
                 respuesta.append(p1)
                 puntero1 = puntero1 + 1
                 puntero2 = puntero2 + 1
-            if p1[puntero1] < p2[puntero2]:
-                respuesta.append(p1)
-                puntero1 = puntero1 + 1
-                while(p1[puntero1] < p2[puntero2]):
-                    respuesta.append(p1[puntero1])
+            else:
+                if p1[puntero1] < p2[puntero2]:
+                    respuesta.append(p1)
                     puntero1 = puntero1 + 1
-                puntero1 = puntero1 + 1
-                puntero2 = puntero2 + 1
-            if p2[puntero2] < p1[puntero1]:
-                respuesta.append(p2)
-                puntero2 = puntero2 + 1
-                while(p2[puntero2] < p1[puntero1]):
-                    respuesta.append(p2[puntero2])
+                    while(puntero1 < len(p1) and puntero2 < len(p2) and p1[puntero1] < p2[puntero2]):
+                        respuesta.append(p1[puntero1])
+                        puntero1 = puntero1 + 1
+                    puntero1 = puntero1 + 1
                     puntero2 = puntero2 + 1
-                puntero1 = puntero1 + 1
-                puntero2 = puntero2 + 1
+                else:
+                    respuesta.append(p2)
+                    puntero2 = puntero2 + 1
+                    while(puntero1 < len(p1) and puntero2 < len(p2) and p2[puntero2] < p1[puntero1]):
+                        respuesta.append(p2[puntero2])
+                        puntero2 = puntero2 + 1
+                    puntero1 = puntero1 + 1
+                    puntero2 = puntero2 + 1
 
         
         #Se añade la lista cuyo puntero no había llegado al final
