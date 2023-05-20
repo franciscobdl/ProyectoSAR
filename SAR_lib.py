@@ -295,7 +295,6 @@ class SAR_Indexer:
         #################
         ### COMPLETAR ###
         #################
-        print(self.numindex)
         
     def get_token_pos(self, art_id, pos):
         #NUEVO
@@ -358,7 +357,6 @@ class SAR_Indexer:
             else:
                 self.sindex[self.stemmer.stem(termino)].append(termino)
 
-        print(self.sindex)
         ####################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
         ####################################################
@@ -469,63 +467,63 @@ class SAR_Indexer:
                     return []
             else: aux = []
             
+        print('query: ', query)
+
+        # try:
+        for i in range(len(query)):
+            # print('query actual: ', query)
+            if query[i] not in operator and len(query) == 1:
+                query[i] = self.get_posting(query[i]) #si la query solo es una palabra, devuelve la posting list de esa palabra
                 
-
-        try:
-            for i in range(len(query)):
-                # print('query actual: ', query)
-                if query[i] not in operator and len(query) == 1:
-                    query[i] = self.get_posting(query[i]) #si la query solo es una palabra, devuelve la posting list de esa palabra
-                    
-                elif query[i] == 'or':
-                    if i - 1 == -1:
-                        print('Error: no puede haber un operador al principio de la query')
-                        return []
-                    elif query[i - 1] in operator or query[i + 1] == 'and':
-                        print('Error: no puede haber dos operadores binarios seguidos')
-                        return []
-                    elif query[i + 1] == 'not': #or not
-                        query[i + 1] = self.reverse_posting(self.get_posting(query[i + 2]))
-                        query[i + 2] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
-                        query[i - 1] = ''
-                        query[i] = ''
-                        query[i + 1] = ''
-                    else: 
-                        query[i + 1] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1])) 
-                        query[i - 1] = ''
-                        query[i] = ''
-                    #el resultado lo guarda en la posicion mas a la derecha de los elementos implicados
-                
-                elif query[i] == 'and':
-                    if i - 1 == -1:
-                        print('Error: no puede haber un operador al principio de la query')
-                        return []
-                    elif query[i - 1] in operator or query[i + 1] == 'or':
-                        print('Error: no puede haber dos operadores binarios seguidos')
-                        return []
-                    elif query[i + 1] == 'not': #and not
-                        query[i + 2] = self.minus_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 2]))
-                        query[i]= '' #elimino el termino de la query para que no se vuelva a usar
-                        query[i - 1]= '' #elimino el termino de la query para que no se vuelva a usar
-                        query[i + 1]= '' #elimino el termino de la query para que no se vuelva a usar
-                    else: 
-                        query[i + 1] = self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
-                        query[i]= '' #elimino el termino de la query para que no se vuelva a usar
-                        query[i - 1]= '' #elimino el termino de la query para que no se vuelva a usar
-
-                elif query[i] == 'not':
-                    if query[i + 1] in operator:
-                        print('Error: no puede haber un operador despues de not')
-                        return []            
-                    else: 
-                        query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
-                        query[i]= '' #elimino el termino de la query para que no se vuelva a usar
-
-            return query[-1] #el resultado se queda en la ultima posicion de la lista
+            elif query[i] == 'or':
+                if i - 1 == -1:
+                    print('Error: no puede haber un operador al principio de la query')
+                    return []
+                elif query[i - 1] in operator or query[i + 1] == 'and':
+                    print('Error: no puede haber dos operadores binarios seguidos')
+                    return []
+                elif query[i + 1] == 'not': #or not
+                    query[i + 1] = self.reverse_posting(self.get_posting(query[i + 2]))
+                    query[i + 2] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
+                    query[i - 1] = ''
+                    query[i] = ''
+                    query[i + 1] = ''
+                else: 
+                    query[i + 1] = self.or_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1])) 
+                    query[i - 1] = ''
+                    query[i] = ''
+                #el resultado lo guarda en la posicion mas a la derecha de los elementos implicados
             
-        except IndexError:
-            print('Error: la query está mal escrita')
-            return []
+            elif query[i] == 'and':
+                if i - 1 == -1:
+                    print('Error: no puede haber un operador al principio de la query')
+                    return []
+                elif query[i - 1] in operator or query[i + 1] == 'or':
+                    print('Error: no puede haber dos operadores binarios seguidos')
+                    return []
+                elif query[i + 1] == 'not': #and not
+                    query[i + 2] = self.minus_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 2]))
+                    query[i]= '' #elimino el termino de la query para que no se vuelva a usar
+                    query[i - 1]= '' #elimino el termino de la query para que no se vuelva a usar
+                    query[i + 1]= '' #elimino el termino de la query para que no se vuelva a usar
+                else: 
+                    query[i + 1] = self.and_posting(self.get_posting(query[i - 1]), self.get_posting(query[i + 1]))
+                    query[i]= '' #elimino el termino de la query para que no se vuelva a usar
+                    query[i - 1]= '' #elimino el termino de la query para que no se vuelva a usar
+
+            elif query[i] == 'not':
+                if query[i + 1] in operator:
+                    print('Error: no puede haber un operador despues de not')
+                    return []            
+                else: 
+                    query[i + 1] = self.reverse_posting(self.get_posting(query[i + 1]))
+                    query[i]= '' #elimino el termino de la query para que no se vuelva a usar
+
+        return query[-1] #el resultado se queda en la ultima posicion de la lista
+            
+        # except IndexError:
+        #     print('Error: la query está mal escrita')
+        #     return []
 
 
     def get_posting(self, term:str, field:Optional[str]=None):
