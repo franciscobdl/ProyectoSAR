@@ -171,6 +171,10 @@ class SAR_Indexer:
         self.stemming = args['stem']
         self.permuterm = args['permuterm']
 
+        #NUEVO
+        if self.stemming:
+            self.set_stemming(True)
+
         file_or_dir = Path(root)
         
         if file_or_dir.is_file():
@@ -187,6 +191,8 @@ class SAR_Indexer:
             print(f"ERROR:{root} is not a file nor directory!", file=sys.stderr)
             sys.exit(-1)
 
+        if self.use_stemming:
+            self.make_stemming()
         ##########################################
         ## COMPLETAR PARA FUNCIONALIDADES EXTRA ##
         ##########################################
@@ -241,7 +247,7 @@ class SAR_Indexer:
                 continue
             # print(j['all'])
             art_id = len(self.articles) + 1
-            self.articles[art_id] = (j['url'], j['title'], j['all']) #asigna el art_id TODO: usa el valor de art_id para meter toda la info que necesites en forma de tupla
+            self.articles[art_id] = (j['url'], j['title'], j['all']) #asigna el art_id
 
             # Indexar los campos
             # for field, tokenize_field in self.fields:
@@ -255,8 +261,6 @@ class SAR_Indexer:
             for pos, token in tokens:
                 term = token.lower() #pasa a minusculas
 
-                if self.use_stemming:
-                    term = self.stemmer.stem(term)
 
                 if term not in self.index:
                     self.index[term] = [] #crea la entrada en el indice
@@ -270,10 +274,7 @@ class SAR_Indexer:
                 self.numindex[term].append((art_id, pos)) #añade el art_id a la lista de art_id del termino con la posición en la que está
 
             self.urls.add(j['url'])
-
         
-        if self.use_stemming:
-            self.make_stemming()
 
         if self.permuterm:
             self.make_permuterm()
@@ -351,11 +352,12 @@ class SAR_Indexer:
 
         """
         terminos = list(self.index.keys())
-        for termino in terminos:
-            if self.stemmer.stem(termino) not in self.sindex: #si el stem no está en el indice de stemming
-                self.sindex[self.stemmer.stem(termino)] = [] #crea la entrada en el indice de stemming
+        for termino in terminos: #para cada termino en el indice
+            stemmed = self.stemmer.stem(termino) #stemmea el termino
+            if stemmed not in self.sindex: #si el stem no está en el indice de stemming
+                self.sindex[stemmed] = [termino] #crea la entrada en el indice de stemming
             else:
-                self.sindex[self.stemmer.stem(termino)].append(termino)
+                self.sindex[stemmed].append(termino) #añade el termino original al indice de stemming con clave stemmeada
 
         ####################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
@@ -392,22 +394,26 @@ class SAR_Indexer:
         print("-" * 30)
         print("Number of indexed articles:", len(self.articles))
         print("-" * 30)
-        print('TOKENS:')
-        for field, tok in self.fields:
-            if (self.multifield or field == "article"):
-                print("\t# of tokens in '{}': {}".format(field, len(self.index[field])))
-        if (self.permuterm):
-            print("-" * 30)
-            print('PERMUTERMS:')
-            for field, tok in self.fields:
-                if (self.multifield or field == "article"):
-                    print("\t# of tokens in '{}': {}".format(field, len(self.ptindex[field])))
+        print(f'TOKENS: {len(self.index)}')
         if (self.stemming):
             print("-" * 30)
-            print('STEMS:')
-            for field, tok in self.fields:
-                if (self.multifield or field == "article"):
-                    print("\t# of tokens in '{}': {}".format(field, len(self.sindex[field])))
+            print(f'STEMS: {len(self.sindex)}')
+        # for field, tok in self.fields:
+        #     if (self.multifield or field == "article"):
+        #         print("\t# of tokens in '{}': {}".format(field, len(self.index[field])))
+        # if (self.permuterm):
+        #     print("-" * 30)
+        #     print('PERMUTERMS:')
+        #     for field, tok in self.fields:
+        #         if (self.multifield or field == "article"):
+        #             print("\t# of tokens in '{}': {}".format(field, len(self.ptindex[field])))
+        # if (self.stemming):
+        #     print("-" * 30)
+        #     print('STEMS:')
+        #     for field, tok in self.fields:
+        #         if (self.multifield or field == "article"):
+        #             print("\t# of tokens in '{}': {}".format(field, len(self.sindex[field])))
+
         print("-" * 30)
         if (self.positional):
             print('Positional queries are allowed.')
@@ -545,7 +551,9 @@ class SAR_Indexer:
 
         """
         
-        if isinstance(term, List): return term
+        if isinstance(term, List): return term #si ya es una posting list, no hace nada
+        if self.use_stemming:
+            return self.get_stemming(term)
         if term in self.index: return self.index[term]
         else: return []
         
@@ -607,8 +615,19 @@ class SAR_Indexer:
         return: posting list
 
         """
-        
         stem = self.stemmer.stem(term)
+        if stem not in self.sindex: return []
+        terms = self.sindex[stem] #lista de terminos que tienen el mismo stem
+        res = []
+        for i in range(len(terms)):
+            print(terms[i])
+            terms [i] = self.index[terms[i]] #conviertes el term en una posting list
+        #al terminar el bucle, la lista de terminos se habra convertido en una lista de sus posting lists
+        #ahora hay que hacer el or de todas las posting lists
+        for i in range(len(terms)):
+            res = self.or_posting(res, terms[i])
+        return res
+
 
         ####################################################
         ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
