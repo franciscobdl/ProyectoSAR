@@ -171,7 +171,6 @@ class SAR_Indexer:
         self.stemming = args['stem']
         self.permuterm = args['permuterm']
 
-        #NUEVO
         if self.stemming:
             self.set_stemming(True)
 
@@ -193,9 +192,7 @@ class SAR_Indexer:
 
         if self.use_stemming:
             self.make_stemming()
-        ##########################################
-        ## COMPLETAR PARA FUNCIONALIDADES EXTRA ##
-        ##########################################
+
         
         
     def parse_article(self, raw_line:str) -> Dict[str, str]:
@@ -239,34 +236,27 @@ class SAR_Indexer:
 
         """
         doc_id = len(self.docs) + 1
-        self.docs[doc_id] = filename #da el docid
+        self.docs[doc_id] = filename
         
-        for i, line in enumerate(open(filename)): #cada linea es un articulo. la i indica la pos del articulo en el archivo
-            j = self.parse_article(line) #j = diccionario con la info del articulo
+        for i, line in enumerate(open(filename)):
+            j = self.parse_article(line)
             if self.already_in_index(j):
                 continue
-            # print(j['all'])
             art_id = len(self.articles) + 1
-            self.articles[art_id] = (j['url'], j['title'], j['all']) #asigna el art_id
-
-            # Indexar los campos
-            # for field, tokenize_field in self.fields:
-            #     if field not in j:
-            #         continue
+            self.articles[art_id] = (j['url'], j['title'], j['all'])
                 
             content = j['all']
             tokens = enumerate(self.tokenize(content))
-            # if tokenize_field else [content]
             
             for pos, token in tokens:
-                term = token.lower() #pasa a minusculas
+                term = token.lower()
 
 
                 if term not in self.index:
-                    self.index[term] = [] #crea la entrada en el indice
+                    self.index[term] = []
 
                 if term not in self.numindex:
-                    self.numindex[term] = [] #crea la entrada en el index de posicion de terminos
+                    self.numindex[term] = []
 
                 if art_id not in self.index[term]:
                     self.index[term].append(art_id)
@@ -274,28 +264,14 @@ class SAR_Indexer:
                 self.numindex[term].append((art_id, pos)) #añade el art_id a la lista de art_id del termino con la posición en la que está
 
             self.urls.add(j['url'])
-        
-
-        if self.permuterm:
-            self.make_permuterm()
-            
+                
+        #Conversión a índice invertido          
         terminos = sorted(self.index.keys())
         inverted_index = {}
         for termino in terminos:
             inverted_index[termino] = self.index[termino]
             
         self.index = inverted_index
-        print(self.tokenize(self.articles[99][2])[1172])
-
-        #
-        # 
-        # En la version basica solo se debe indexar el contenido "article"
-        #
-        #
-        #
-        #################
-        ### COMPLETAR ###
-        #################
         
     def get_token_pos(self, art_id, pos):
         #NUEVO
@@ -352,16 +328,12 @@ class SAR_Indexer:
 
         """
         terminos = list(self.index.keys())
-        for termino in terminos: #para cada termino en el indice
-            stemmed = self.stemmer.stem(termino) #stemmea el termino
-            if stemmed not in self.sindex: #si el stem no está en el indice de stemming
-                self.sindex[stemmed] = [termino] #crea la entrada en el indice de stemming
+        for termino in terminos:
+            stemmed = self.stemmer.stem(termino)
+            if stemmed not in self.sindex:
+                self.sindex[stemmed] = [termino]
             else:
-                self.sindex[stemmed].append(termino) #añade el termino original al indice de stemming con clave stemmeada
-
-        ####################################################
-        ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
-        ####################################################
+                self.sindex[stemmed].append(termino)
 
 
     
@@ -376,7 +348,7 @@ class SAR_Indexer:
         """
         pass
         ####################################################
-        ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
+        ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE PERMUTERM ##
         ####################################################
 
 
@@ -398,32 +370,12 @@ class SAR_Indexer:
         if (self.stemming):
             print("-" * 30)
             print(f'STEMS: {len(self.sindex)}')
-        # for field, tok in self.fields:
-        #     if (self.multifield or field == "article"):
-        #         print("\t# of tokens in '{}': {}".format(field, len(self.index[field])))
-        # if (self.permuterm):
-        #     print("-" * 30)
-        #     print('PERMUTERMS:')
-        #     for field, tok in self.fields:
-        #         if (self.multifield or field == "article"):
-        #             print("\t# of tokens in '{}': {}".format(field, len(self.ptindex[field])))
-        # if (self.stemming):
-        #     print("-" * 30)
-        #     print('STEMS:')
-        #     for field, tok in self.fields:
-        #         if (self.multifield or field == "article"):
-        #             print("\t# of tokens in '{}': {}".format(field, len(self.sindex[field])))
-
         print("-" * 30)
         if (self.positional):
             print('Positional queries are allowed.')
         else:    
             print('Positional queries are NOT allowed.')
         print("=" * 30)
-
-        ########################################
-        ## COMPLETAR PARA TODAS LAS VERSIONES ##
-        ########################################
         
 
 
@@ -469,7 +421,7 @@ class SAR_Indexer:
 
         #TRATAMIENTO DE PARÉNTESIS
 
-        while '(' in query or ')' in query: #si hay parentesis  
+        while '(' in query or ')' in query:
             print('query parentesis: ', query)
             inicio = 0
             fin = 0
@@ -492,6 +444,8 @@ class SAR_Indexer:
         operator = ['or', 'and', 'not']
         print('query: ', query)
 
+        #TRATAMIENTO COMILLAS
+
         while '"' in query:
             print('query comillas: ', query)
             inicio = -1
@@ -508,28 +462,8 @@ class SAR_Indexer:
             query[inicio] = self.get_positionals(subqueryc)
             print('res: ', query[inicio], len(query[inicio]))
             print('query: ', query)
-        
-        # positional = []
-        # for i in range(len(query)):
-        #     if query[i] not in operator:
-        #             positional.append(query[i])                    #haz el and si la lista de posiciones es mayor que 1
-        #             print('positional1: ', positional)
-        #     elif len(positional) > 1:
-        #         print('positional2: ', positional)
-        #         for i in range(len(positional) - 1):
-        #             positional[i + 1] = self.and_posting(self.get_posting(positional[i]), self.get_posting(positional[i + 1]))
-        #             print('res1: ', positional[-1])
-        #     else: positional = []
-                
-        
-        # if len(positional) > 1:
-        #     print('positional3: ', positional)
-        #     for i in range(len(positional)):
-        #         if i >= 1:
-        #             positional[i] = self.and_posting(self.get_posting(positional[i - 1]), self.get_posting(positional[i]))
 
-        # print('res2: ', positional[-1], len(positional[-1]))
-
+        # ERROR: DOS PALABRAS SEGUIDAS
         aux = []
         for w in query:
             if w not in operator:
@@ -539,12 +473,13 @@ class SAR_Indexer:
                     return []
             else: aux = []
         
+        #TRATAMIENTO DE OPERADORES
 
         try:
+            buffer = []
             for i in range(len(query)):
                 if query[i] not in operator and len(query) == 1:
-                    query[i] = self.get_posting(query[i]) #si la query solo es una palabra, devuelve la posting list de esa palabra
-                    
+                    query[i] = self.get_posting(query[i]) #si la query solo es una palabra, devuelve la posting list de esa palabra                   
                 elif query[i] == 'or':
                     if i - 1 == -1:
                         print('Error: no puede haber un operador al principio de la query')
@@ -683,26 +618,15 @@ class SAR_Indexer:
 
         """
 
-        #en algun punto los valores del diccionario de sindex se convierten a posting list
-
-        stem = self.stemmer.stem(term) #casa -> cas
+        stem = self.stemmer.stem(term)
         if stem not in self.sindex: return []
-        terms = list(self.sindex[stem]) #lista de terminos que tienen el mismo stem
-        # print('CAS1: ', self.sindex['cas'])
+        terms = list(self.sindex[stem])
         res = []
         for i in range(len(terms)):
-            terms[i] = self.index[terms[i]] #conviertes el term en una posting list
-        # print('\n\nCAS2: ', self.sindex['cas'])
-        #al terminar el bucle, la lista de terminos se habra convertido en una lista de sus posting lists
-        #ahora hay que hacer el or de todas las posting lists
+            terms[i] = self.index[terms[i]]
         for i in range(len(terms)):
             res = self.or_posting(res, terms[i])
         return res
-
-
-        ####################################################
-        ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE STEMMING ##
-        ####################################################
 
     def get_permuterm(self, term:str, field:Optional[str]=None):
         """
@@ -862,15 +786,10 @@ class SAR_Indexer:
         return: posting list con los artid incluidos de p1 y no en p2
 
         """
-        #la resta es lo mismo que A AND NOT B
+        #la resta es lo mismo que p1 AND NOT p2
         p2 = self.reverse_posting(p2)
         return self.and_posting(p1, p2)
 
-        
-        pass
-        ########################################################
-        ## COMPLETAR PARA TODAS LAS VERSIONES SI ES NECESARIO ##
-        ########################################################
 
 
     #####################################
@@ -942,12 +861,8 @@ class SAR_Indexer:
             
         return n
         
-        ################
-        ## COMPLETAR  ##
-        ################
 
     def get_snippet(self, art_id, term):
-        #NUEVO
         """
         obtiene el snippet de un termino en un articulo 
 
@@ -960,7 +875,7 @@ class SAR_Indexer:
         articulos = self.numindex[term] #lista de tuplas (art_id, posiciones)
         for a in articulos:
             if a[0] == art_id:
-                posiciones.append(a[1]) #si el articulo q busco coincide con el que estoy mirando, añado sus posiciones a la lista
+                posiciones.append(a[1])
         posi = posiciones[0]
 
         s1 = ''
