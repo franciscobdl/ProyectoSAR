@@ -577,10 +577,10 @@ class SAR_Indexer:
 
         """
         
-        pass
-        ########################################
-        ## COMPLETAR PARA TODAS LAS VERSIONES ##
-        ########################################
+        #Como los argumentos son listas, se puede pensar en teoría de conjuntos. NOT es el complementario
+        
+        articulos = self.articles.keys()
+        return list(set(articulos) - set(p)).sort()
 
 
 
@@ -691,20 +691,6 @@ class SAR_Indexer:
         ## COMPLETAR PARA TODAS LAS VERSIONES SI ES NECESARIO ##
         ########################################################
 
-
-    def not_posting(self, p):
-        """
-        Calcula el NOT de una posting list.
-
-        param:  "p": posting list sobre la que calcular
-
-        return: posting list con los artid no incluidos en p
-
-        """
-        #como los argumentos son listas, se puede pensar en teoría de conjuntos. NOT es el complementario
-
-        articulos = self.articles.keys()
-        return list(set(articulos) - set(p)).sort()
 
 
 
