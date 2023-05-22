@@ -590,35 +590,37 @@ class SAR_Indexer:
         return: posting list
 
         """
-        pass
-        ########################################################
-        ## COMPLETAR PARA FUNCIONALIDAD EXTRA DE POSICIONALES ##
-        ########################################################
-        
-        #numindex devuelve una lista de tuplas con (artid, pos)
-        
-        postinglist = []
-        
-        for term in terms:
-            postinglist = self.numindex[term]
-            if len(postinglist) != 0 : 
-                docid, pos = postinglist[0]
-                positions = [pos]
-                for i in range(len(postinglist)-1):
-                    docidaux, positionsaux = postinglist[i+1]
-                    if docidaux == docid:
-                        positions.append(positionsaux)
-                
-                    
-                   
-                
-                
-                
-                
-            
-            
-        
-        
+        term_list = terms.split()
+        if len(term_list) == 0:
+            return []
+
+        # Obtener la posting list del primer término
+        first_term = term_list[0]
+        posting_list = self.numindex[first_term]
+
+        # Iterar sobre los términos restantes para filtrar la posting list
+        for term in term_list[1:]:
+            next_posting_list = self.numindex[term]
+            new_posting_list = []
+            i = j = 0
+
+            # Realizar la intersección de las posting lists
+            while i < len(posting_list) and j < len(next_posting_list):
+                if posting_list[i][0] == next_posting_list[j][0]:
+                    # Verificar si los documentos son consecutivos
+                    if posting_list[i][1] + 1 == next_posting_list[j][1]:
+                        new_posting_list.append(next_posting_list[j])
+                    i += 1
+                    j += 1
+                elif posting_list[i][0] < next_posting_list[j][0]:
+                    i += 1
+                else:
+                    j += 1
+
+            posting_list = new_posting_list
+
+        return posting_list
+
 
 
     def get_stemming(self, term:str, field: Optional[str]=None):
