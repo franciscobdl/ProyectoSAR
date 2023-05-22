@@ -1,0 +1,42 @@
+#
+# MINIMO
+#
+
+casa	172
+cosa	65
+NOT casa	124
+casa AND cosa	51
+casa AND NOT cosa	121
+precisión	29
+precisión AND exhaustividad	4
+precisión OR exhaustividad	31
+precisión AND NOT exhaustividad	25
+NOT precisión OR NOT exhaustividad	292
+de	295
+isla	35
+valencia	20
+sanidad	2
+cultura	52
+videojuegos	44
+videojuegos OR cultura	86
+videojuegos OR NOT videojuegos	296
+isla AND valencia	8
+isla AND NOT valencia	27
+NOT pero	111
+isla AND NOT valencia AND NOT pero	9
+NOT isla AND NOT valencia AND NOT pero	93
+isla AND valencia AND pero	7
+isla OR valencia	47
+isla OR NOT valencia	284
+NOT isla OR valencia	269
+NOT isla OR NOT valencia	288
+NOT isla OR NOT valencia AND pero	178
+NOT isla OR NOT valencia AND NOT pero	110
+NOT isla OR NOT valencia OR NOT pero	289
+años	142
+google	31
+cultura	52
+google OR cultura	74
+años AND google	19
+años AND cultura	41
+
