@@ -633,13 +633,17 @@ class SAR_Indexer:
         return: posting list
 
         """
-        stem = self.stemmer.stem(term)
+
+        #en algun punto los valores del diccionario de sindex se convierten a posting list
+
+        stem = self.stemmer.stem(term) #casa -> cas
         if stem not in self.sindex: return []
-        terms = self.sindex[stem] #lista de terminos que tienen el mismo stem
+        terms = list(self.sindex[stem]) #lista de terminos que tienen el mismo stem
+        # print('CAS1: ', self.sindex['cas'])
         res = []
         for i in range(len(terms)):
-            print(terms[i])
-            terms [i] = self.index[terms[i]] #conviertes el term en una posting list
+            terms[i] = self.index[terms[i]] #conviertes el term en una posting list
+        # print('\n\nCAS2: ', self.sindex['cas'])
         #al terminar el bucle, la lista de terminos se habra convertido en una lista de sus posting lists
         #ahora hay que hacer el or de todas las posting lists
         for i in range(len(terms)):
