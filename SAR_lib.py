@@ -411,18 +411,15 @@ class SAR_Indexer:
         #TOKENIZACIÓN DE LA QUERY EN CASO DE SER STRING
 
         if isinstance(query, str): 
-            print('query sin tokenizar: ', query)   
             query = query.lower()
             query = query.replace('(', '( ')            
             query = query.replace(')', ' )')
             query = query.replace('"' , ' " ')
-            print('query: ', query)
             query = query.split()
 
         #TRATAMIENTO DE PARÉNTESIS
 
         while '(' in query or ')' in query:
-            print('query parentesis: ', query)
             inicio = 0
             fin = 0
             for i in range(len(query)):
@@ -432,7 +429,6 @@ class SAR_Indexer:
                     fin = i
                     break 
             subquery = query[inicio + 1: fin] #subquery entre parentesis
-            print('subquery: ', subquery)
             query[inicio + 1: fin + 1] = '' #elimina la subquery de la query excepto el paréntesis abierto
             query[inicio] = self.solve_query(subquery) #resuelve la subquery y la sustituye por el paréntesis abierto
         
@@ -442,12 +438,10 @@ class SAR_Indexer:
         
 
         operator = ['or', 'and', 'not']
-        print('query: ', query)
 
         #TRATAMIENTO COMILLAS
 
         while '"' in query:
-            print('query comillas: ', query)
             inicio = -1
             fin = -1
             for i in range(len(query)):
@@ -457,11 +451,8 @@ class SAR_Indexer:
                     fin = i
                     break
             subqueryc = query[inicio + 1: fin]
-            print('subqueryc: ', subqueryc)
             query[inicio + 1: fin + 1] = ''
             query[inicio] = self.get_positionals(subqueryc)
-            print('res: ', query[inicio], len(query[inicio]))
-            print('query: ', query)
 
         # ERROR: DOS PALABRAS SEGUIDAS
         aux = []
@@ -571,7 +562,6 @@ class SAR_Indexer:
         return: posting list
 
         """
-        print('terms: ', terms)
         term_list = terms
         if len(term_list) == 0:
             return []

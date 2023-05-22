@@ -2,3 +2,22 @@
 
 
 "recuperación de información"	20
+"búsqueda de información"	8
+"búsqueda y recuperación de información"	2
+base AND de AND datos	102
+"base de datos"	56
+"base de" AND "de datos"	72
+"base de" AND "de datos" AND NOT "base de datos"	16
+"casa de"	16
+"casa de papel"	2
+"documentos recuperados"	5
+"fin de semana"	2
+fin AND de AND semana	10
+fin AND de AND semana AND país	8
+"fin de semana"	2
+"fin de semana" AND país	1
+medalla AND de AND oro	6
+"medalla de oro"	5
+deporte AND "medalla de oro"	2
+"medalla de oro" AND NOT deporte	3
+"nada de nada"	0

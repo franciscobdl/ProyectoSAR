@@ -1,0 +1,24 @@
+#
+# PARENTESIS
+#
+precisión	28
+precisión AND exhaustividad	3
+precisión OR exhaustividad	29
+precisión AND NOT exhaustividad	25
+NOT precisión OR NOT exhaustividad	293
+NOT (precisión AND exhaustividad)	293
+NOT precisión AND NOT exhaustividad	267
+NOT (NOT precisión AND NOT exhaustividad)	29
+años AND google OR cultura	54
+años AND (google OR cultura)	46
+(google OR cultura) AND años	46
+años AND NOT (google OR cultura)	96
+años AND (NOT google AND NOT cultura)	96
+NOT (google OR cultura) AND años	96
+(psoe OR pp OR CiU)	61
+(economía OR política)	69
+(psoe OR pp OR CiU) AND (economía OR política)	27
+NOT (psoe OR pp OR CiU) AND (economía OR política)	42
+mujer	30
+mujer AND ((psoe OR pp OR CiU) AND (economía OR política))	10
+mujer AND (NOT (psoe OR pp OR CiU) AND (economía OR política))	17
