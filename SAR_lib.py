@@ -456,11 +456,19 @@ class SAR_Indexer:
         return: posting list con el resultado de la query
 
         """
-        if isinstance(query, str): #si la query es un string, tokenizalo primero pero sin eliminar parentesis
+        #TOKENIZACIÓN DE LA QUERY EN CASO DE SER STRING
+
+        if isinstance(query, str): 
+            print('query sin tokenizar: ', query)   
             query = query.lower()
             query = query.replace('(', '( ')            
             query = query.replace(')', ' )')
+            query = query.replace('"' , ' " ')
+            print('query: ', query)
             query = query.split()
+
+        #TRATAMIENTO DE PARÉNTESIS
+
         while '(' in query or ')' in query: #si hay parentesis  
             print('query parentesis: ', query)
             inicio = 0
@@ -473,7 +481,6 @@ class SAR_Indexer:
                     break 
             subquery = query[inicio + 1: fin] #subquery entre parentesis
             print('subquery: ', subquery)
-
             query[inicio + 1: fin + 1] = '' #elimina la subquery de la query excepto el paréntesis abierto
             query[inicio] = self.solve_query(subquery) #resuelve la subquery y la sustituye por el paréntesis abierto
         
@@ -483,7 +490,46 @@ class SAR_Indexer:
         
 
         operator = ['or', 'and', 'not']
+        print('query: ', query)
+
+        while '"' in query:
+            print('query comillas: ', query)
+            inicio = -1
+            fin = -1
+            for i in range(len(query)):
+                if query[i] == '"' and inicio == -1:
+                    inicio = i
+                elif query[i] == '"' and inicio != -1:
+                    fin = i
+                    break
+            subqueryc = query[inicio + 1: fin]
+            print('subqueryc: ', subqueryc)
+            query[inicio + 1: fin + 1] = ''
+            query[inicio] = self.get_positionals(subqueryc)
+            print('res: ', query[inicio], len(query[inicio]))
+            print('query: ', query)
         
+        # positional = []
+        # for i in range(len(query)):
+        #     if query[i] not in operator:
+        #             positional.append(query[i])                    #haz el and si la lista de posiciones es mayor que 1
+        #             print('positional1: ', positional)
+        #     elif len(positional) > 1:
+        #         print('positional2: ', positional)
+        #         for i in range(len(positional) - 1):
+        #             positional[i + 1] = self.and_posting(self.get_posting(positional[i]), self.get_posting(positional[i + 1]))
+        #             print('res1: ', positional[-1])
+        #     else: positional = []
+                
+        
+        # if len(positional) > 1:
+        #     print('positional3: ', positional)
+        #     for i in range(len(positional)):
+        #         if i >= 1:
+        #             positional[i] = self.and_posting(self.get_posting(positional[i - 1]), self.get_posting(positional[i]))
+
+        # print('res2: ', positional[-1], len(positional[-1]))
+
         aux = []
         for w in query:
             if w not in operator:
@@ -492,7 +538,7 @@ class SAR_Indexer:
                     print('Error: hay dos palabras seguidas en la query: ', query)
                     return []
             else: aux = []
-            
+        
 
         try:
             for i in range(len(query)):
@@ -578,7 +624,7 @@ class SAR_Indexer:
 
 
 
-    def get_positionals(self, terms:str, index):
+    def get_positionals(self, terms:str, field:Optional[str]=None):
         """
 
         Devuelve la posting list asociada a una secuencia de terminos consecutivos.
@@ -590,7 +636,8 @@ class SAR_Indexer:
         return: posting list
 
         """
-        term_list = terms.split()
+        print('terms: ', terms)
+        term_list = terms
         if len(term_list) == 0:
             return []
 

@@ -1,0 +1,4 @@
+# POSITIONAL
+
+
+"recuperación de información"	20
